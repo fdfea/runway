@@ -1,0 +1,39 @@
+# ---- Session / notes ----
+*.txt
+*.md
+
+# ---- Dependencies ----
+node_modules/
+
+# ---- Build output ----
+dist/
+build/
+out/
+*.tsbuildinfo
+
+# ---- Vite / Rollup ----
+.vite/
+.rollup.cache/
+
+# ---- TypeScript cache ----
+*.js.map
+*.d.ts.map
+
+# ---- Jest ----
+coverage/
+.jest-cache/
+
+# ---- Environment ----
+.env
+.env.*
+!.env.example
+
+# ---- OS ----
+.DS_Store
+Thumbs.db
+
+# ---- Editors ----
+.vscode/
+.idea/
+*.swp
+*.swo
