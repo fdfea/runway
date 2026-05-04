@@ -1,0 +1,28 @@
+{
+  "name": "engine",
+  "version": "0.1.0",
+  "description": "Backend card library and rules implementation for Game.",
+  "main": "main.ts",
+  "author": "Forrest Feaser",
+  "dependencies": {
+    "@types/lodash": "^4.17.23",
+    "@types/readline-sync": "^1.4.8",
+    "lodash": "^4.17.23",
+    "readline-sync": "^1.4.10",
+    "typescript": "^5.9.3"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "jest": "^30.3.0",
+    "jest-extended": "^7.0.0",
+    "ts-jest": "^29.4.9",
+    "ts-node": "^10.9.2"
+  },
+  "scripts": {
+    "start": "ts-node src/main.ts",
+    "build": "tsc",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:cov": "jest --coverage"
+  }
+}

@@ -1,6 +1,7 @@
 # ---- Session / notes ----
 *.txt
 *.md
+!README.md
 
 # ---- Dependencies ----
 node_modules/
