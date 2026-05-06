@@ -1,5 +1,5 @@
 import lodash from 'lodash'
-import { lift } from './utils'
+import { TreeIndex } from 'scl'
 
 export enum Suit {
     Clubs = "c",
@@ -20,7 +20,7 @@ export class Suits {
         return this.SuitLookup[suit]
     }
 
-    private static SuitLookup: { [key: string]: Suit } = {
+    private static readonly SuitLookup: { [key: string]: Suit } = {
         c: Suit.Clubs,
         d: Suit.Diamonds,
         h: Suit.Hearts,
@@ -28,6 +28,11 @@ export class Suits {
     }
 
     static readonly All: ReadonlySet<Suit> = new Set(Object.values(this.SuitLookup))
+
+    static compare(r1: Suit, r2: Suit): number {
+        const allArray = [...this.All]
+        return allArray.indexOf(r1) - allArray.indexOf(r2)
+    }
 }
 
 export enum Rank {
@@ -62,7 +67,7 @@ export class Ranks {
         return Ranks.ConsecutiveRankLookup[rank1.valueOf()].some(value => value === rank2)
     }
 
-    private static RankLookup: { [key: string]: Rank } = {
+    private static readonly RankLookup: { [key: string]: Rank } = {
         2: Rank.Two,
         3: Rank.Three,
         4: Rank.Four,
@@ -78,9 +83,7 @@ export class Ranks {
         A: Rank.Ace
     }
 
-    static readonly All: ReadonlySet<Rank> = new Set(Object.values(this.RankLookup))
-
-    private static ConsecutiveRankLookup: { [key: number | string]: [Rank, Rank] } = {
+    private static readonly ConsecutiveRankLookup: { [key: number | string]: [Rank, Rank] } = {
         2: [Rank.Ace, Rank.Three],
         3: [Rank.Two, Rank.Four],
         4: [Rank.Three, Rank.Five],
@@ -94,6 +97,17 @@ export class Ranks {
         Q: [Rank.Jack, Rank.King],
         K: [Rank.Queen, Rank.Ace],
         A: [Rank.King, Rank.Two]
+    }
+
+    static readonly All: ReadonlySet<Rank> = new Set(Object.values(this.RankLookup))
+
+    static compare(r1: Rank, r2: Rank): number {
+        const allArray = [...this.All]
+        if ((r1 === Rank.Ace && r2 === Rank.Two) || (r1 === Rank.Two && r2 === Rank.Ace)) {
+            return allArray.indexOf(r2) - allArray.indexOf(r1)
+        } else {
+            return allArray.indexOf(r1) - allArray.indexOf(r2)
+        }
     }
 }
 
@@ -186,7 +200,7 @@ export class Cards {
     static readonly _Ks: Card = new Card(Rank.King, Suit.Spades)
     static readonly _As: Card = new Card(Rank.Ace, Suit.Spades)
 
-    private static CardLookup: { [key: string]: Card } = {
+    private static readonly CardLookup: { [key: string]: Card } = {
         __2c: Cards._2c,
         __3c: Cards._3c,
         __4c: Cards._4c,
@@ -242,39 +256,44 @@ export class Cards {
     }
 
     static readonly All: ReadonlySet<Card> = new Set(Object.values(this.CardLookup))
+
+    static compare(c1: Card, c2: Card): number {
+        const compareSuits = Suits.compare(c1.suit, c2.suit)
+        if (compareSuits !== 0) {
+            return compareSuits
+        } else {
+            return Ranks.compare(c1.rank, c2.rank)
+        }
+    }
 }
 
 export interface HasCards extends Iterable<Card> {
     [Symbol.iterator](): IterableIterator<Card>
     contains(card: Card): boolean
-    empty(): boolean
     size(): number
+    empty(): boolean
 }
 
-export interface InsertableHasCards extends HasCards {
+export interface CardPile extends HasCards {
     add(card: Card): boolean
-}
-
-export interface RemoveableHasCards extends HasCards {
+    merge(cards: HasCards): boolean
     remove(card: Card): boolean
-}
-
-export interface ClearableHasCards extends HasCards {
     clear(): boolean
 }
 
-export interface OrderedHasCards extends HasCards {
+export interface SortedCardPile extends CardPile {
     top(): Card | undefined
     bottom(): Card | undefined
 }
 
-export abstract class CardSet implements HasCards {
+export abstract class CardSet extends Object implements HasCards {
     protected cards: Set<Card>
 
     constructor()
     constructor(cards: Iterable<Card>)
 
     constructor(cards?: Iterable<Card>) {
+        super()
         this.cards = new Set(cards ?? [])
     }
     
@@ -286,12 +305,12 @@ export abstract class CardSet implements HasCards {
         return this.cards.has(card)
     }
 
-    empty(): boolean {
-        return !this.cards.size
-    }
-
     size(): number {
         return this.cards.size
+    }
+
+    empty(): boolean {
+        return !this.size()
     }
 
     suits(): Set<Suit> {
@@ -307,7 +326,7 @@ export abstract class CardSet implements HasCards {
     }
 }
 
-export abstract class InsertableCardSet extends CardSet implements InsertableHasCards {
+export class MutableCardSet extends CardSet implements CardPile {
     add(card: Card): boolean {
         if (!this.contains(card)) {
             this.cards.add(card)
@@ -315,9 +334,13 @@ export abstract class InsertableCardSet extends CardSet implements InsertableHas
         }
         return false
     }
-}
 
-export abstract class MutableCardSet extends InsertableCardSet implements RemoveableHasCards, ClearableHasCards {
+    merge(cards: HasCards): boolean {
+        const prevSize = this.size()
+        this.cards = this.cards.union(new Set([...cards]))
+        return this.size() > prevSize
+    }
+    
     remove(card: Card): boolean {
         return this.cards.delete(card)
     }
@@ -327,162 +350,102 @@ export abstract class MutableCardSet extends InsertableCardSet implements Remove
         this.cards = new Set
         return !wasEmpty
     }
-}
-
-export class UnorderedCardPile extends MutableCardSet {
-    addAll(cards: HasCards): void {
-        this.cards = this.cards.union(new Set([...cards]))
-    }
 
     override toString(): string {
         return `[${[...this.cards].join(", ")}]`
     }
 }
 
-export class CardPile extends MutableCardSet implements OrderedHasCards {
-    draw(): Card | undefined {
-        const top = this.top()
-        if (top) {
-            this.remove(top)
-        }
-        return top
-    }
+export class SortedCardSet extends Object implements SortedCardPile {
+    protected cards: TreeIndex<Card>
 
-    top(): Card | undefined {
-        return [...this][this.size() - 1]
-    }
+    constructor()
+    constructor(cards: Iterable<Card>)
 
-    bottom(): Card | undefined {
-        return [...this][0]
-    }
-
-    override toString(): string {
-        return `(${this.cards.size})`
-    }
-}
-
-// foundation pile
-// ace + can insert/merge on either side
-// 
-// tableau pile
-// can only insert/merge on top
-
-export class SuitedConsecutiveCards extends InsertableCardSet implements ClearableHasCards, OrderedHasCards {
-    private topCard: Card | undefined
-    private bottomCard: Card | undefined
-
-    // Stable rank order: Ace(1) < 2 < 3 … < 9 < T < J < Q < K(13)
-    private static readonly RANK_ORDER: Readonly<Record<string, number>> = {
-        A: 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6,
-        '7': 7, '8': 8, '9': 9, T: 10, J: 11, Q: 12, K: 13
-    }
-
-    private static rankIndex(card: Card): number {
-        return SuitedConsecutiveCards.RANK_ORDER[card.rank.toString()] ?? 0
-    }
-
-    /** Re-sort the internal Set so iteration is always Ace → King. */
-    private sortCards(): void {
-        this.cards = new Set(
-            [...this.cards].sort((a, b) =>
-                SuitedConsecutiveCards.rankIndex(a) - SuitedConsecutiveCards.rankIndex(b)
-            )
-        )
-    }
-
-    constructor(card?: Card) {
+    constructor(cards?: Iterable<Card>) {
         super()
-        lift(card, c => this.add(c))
+        this.cards = SortedCardSet.new(cards)
     }
 
-    top(): Card | undefined {
-        return this.topCard
+    [Symbol.iterator](): IterableIterator<Card> {
+        return this.cards[Symbol.iterator]()
     }
 
-    bottom(): Card | undefined {
-        return this.bottomCard
+    contains(card: Card): boolean {
+        return this.cards.has(card)
     }
 
-    complete(): boolean {
-        return [...Ranks.All].every(rank => this.ranks().has(rank))
+    size(): number {
+        return this.cards.size
+    }
+
+    empty(): boolean {
+        return !this.size()
+    }
+
+    add(card: Card): boolean {
+        return this.cards.add(card)[0]
+    }
+
+    merge(cards: HasCards): boolean {
+        const prevSize = this.size()
+        this.cards = SortedCardSet.new([...this.cards, ...cards])
+        return this.size() > prevSize
+    }
+
+    remove(card: Card): boolean {
+        return this.cards.delete(card)
     }
 
     clear(): boolean {
         const wasEmpty = this.empty()
-        this.cards = new Set
-        this.topCard = undefined
-        this.bottomCard = undefined
+        this.cards = SortedCardSet.new(undefined)
         return !wasEmpty
     }
 
-    override add(card: Card): boolean {
-        if (this.empty()) {
-            super.add(card)
-            this.topCard = card
-            this.bottomCard = card
-            return true
-        }
-        
-        if (!(this.top()!.suitedConsecutive(card))) {
-            return false
-        }
-
-        const added = super.add(card)
-        if (added) {
-            this.topCard = card
-            this.sortCards()
-        }
-        return added
+    top(): Card | undefined {
+        return this.cards.begin()?.value
     }
 
-    merge(cards: SuitedConsecutiveCards): boolean {
-        if (cards.empty()) {
-            return false
-        } else if (this.empty()) {
-            this.cards = new Set([...cards])
-            this.topCard = cards.top()
-            this.bottomCard = cards.bottom()
-            this.sortCards()
-            return true
-        }
-        
-        const previousSize: number = this.size()
-        if (this.top()!.suitedConsecutive(cards.top()!)) {
-            this.cards = new Set([...cards, ...this])
-            this.topCard = cards.bottom()
-        } else if (this.top()!.suitedConsecutive(cards.bottom()!)) {
-            this.cards = new Set([...cards, ...this])
-            this.topCard = cards.top()
-        }
-        if (this.size() > previousSize) {
-            this.sortCards()
-            return true
-        }
-        return false
+    bottom(): Card | undefined {
+        return this.cards.end()?.value
     }
 
     override toString(): string {
-        if (this.empty()) {
-            return "[]"
-        } else if (this.size() == 1) {
-            return `[${this.top()}]`
-        } else if (this.complete()){
-            return `[${this.bottom()} ✓]`
-        } else {
-            return `[${this.bottom()} -> ${this.top()}]`
-        }
+        return ""
+    }
+
+    private static new(cards?: Iterable<Card>): TreeIndex<Card> {
+        return new TreeIndex({ 
+            elements: cards,
+            allowDuplicates: false,
+            compareKeys: (c1, c2) => Cards.compare(c1, c2) > 0,
+            isEqual: (c1, c2) => Cards.compare(c1, c2) === 0
+        })
     }
 }
 
-export class Deck extends MutableCardSet {
-    deal(): Card | undefined {
+export class Deck extends CardSet {
+    draw(): Card | undefined {
         const [top, ...remaining] = this
         this.cards = new Set(remaining)
         return top
     }
 
+    deal(): Card | undefined {
+        return this.draw()
+    }
+
     shuffle(): void {
         this.cards = new Set(lodash.shuffle([...this]))
+    }
+
+    remove(card: Card): boolean {
+        return this.cards.delete(card)
+    }
+
+    override toString() {
+        return `(${this.cards.size})`
     }
 }
 
@@ -491,7 +454,7 @@ export class Decks {
     }
 
     static standard(): Deck {
-        return new Deck([...Cards.All])
+        return new Deck(new Set([...Cards.All]))
     }
 
     static noAces(): Deck {
