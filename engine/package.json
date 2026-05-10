@@ -5,15 +5,14 @@
   "main": "main.ts",
   "author": "Forrest Feaser",
   "dependencies": {
-    "@types/lodash": "^4.17.23",
-    "@types/readline-sync": "^1.4.8",
     "lodash": "^4.17.23",
     "readline-sync": "^1.4.10",
-    "scl": "^4.1.1",
     "typescript": "^5.9.3"
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",
+    "@types/lodash": "^4.17.23",
+    "@types/readline-sync": "^1.4.8",
     "jest": "^30.3.0",
     "jest-extended": "^7.0.0",
     "ts-jest": "^29.4.9",

@@ -7,10 +7,13 @@
         "isolatedModules": true,
         "esModuleInterop": true,
         "declaration": true,
-        "outDir": "./dist",
-        "rootDir": "./src",
+        "outDir": "dist/",
+        "rootDir": "src/",
         "strict": true
     },
-    "include": ["src/**/*"],
-    "exclude": ["node_modules", "test", "dist"]
+    "include": ["src/**/*", "test/**/*"],
+    "exclude": ["node_modules", "dist"],
+    "references": [
+        { "path": "./tsconfig.test.json" }
+    ]
 }

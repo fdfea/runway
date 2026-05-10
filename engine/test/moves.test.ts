@@ -32,21 +32,21 @@ test("StockPileToTableauPile", () => {
     const move = Moves.StockPileToTableauPile(1)
     expect(() => game.makeMove(move)).toThrow()
     expect(game.getStockPile().size()).toBe(20)
-    expect(game.getTableauPile(1)?.active.size()).toBe(1)
+    expect(game.getTableauPile(1)?.size()).toBe(1)
 
-    game.getTableauPile(1)?.active.clear()
-    expect(game.getTableauPile(1)?.active.size()).toBe(0)
+    game.getTableauPile(1)?.clear()
+    expect(game.getTableauPile(1)?.size()).toBe(0)
     game.makeMove(move)
     expect(game.getStockPile().size()).toBe(19)
-    expect(game.getTableauPile(1)?.active.size()).toBe(1)
+    expect(game.getTableauPile(1)?.size()).toBe(1)
 
     while (!game.getStockPile().empty()) game.getStockPile().deal()
-    game.getTableauPile(1)?.active.clear()
+    game.getTableauPile(1)?.clear()
     expect(game.getStockPile().size()).toBe(0)
-    expect(game.getTableauPile(1)?.active.size()).toBe(0)
+    expect(game.getTableauPile(1)?.size()).toBe(0)
     expect(() => game.makeMove(move)).toThrow()
     expect(game.getStockPile().size()).toBe(0)
-    expect(game.getTableauPile(1)?.active.size()).toBe(0)
+    expect(game.getTableauPile(1)?.size()).toBe(0)
 
     expect(game.getScore()).toBe(0)
 })
@@ -61,12 +61,12 @@ test("ScorePileToTableauPile", () => {
     expect(() => game.makeMove(badPileMove)).toThrow()
     expect(game.getScorePile().size()).toBe(2)
 
-    game.getTableauPile(2)?.active.clear()
-    expect(game.getTableauPile(2)?.active.size()).toBe(0)
+    game.getTableauPile(2)?.clear()
+    expect(game.getTableauPile(2)?.size()).toBe(0)
     const badCardMove = Moves.ScorePileToTableauPile(Cards._As, 2)
     expect(() => game.makeMove(badCardMove)).toThrow()
     expect(game.getScorePile().size()).toBe(2)
-    expect(game.getTableauPile(2)?.active.size()).toBe(0)
+    expect(game.getTableauPile(2)?.size()).toBe(0)
 
     const valid6sMove = Moves.ScorePileToTableauPile(Cards._6s, 2)
     game.makeMove(valid6sMove)
@@ -74,7 +74,7 @@ test("ScorePileToTableauPile", () => {
     const valid7sMove = Moves.ScorePileToTableauPile(Cards._7s, 2)
     game.makeMove(valid7sMove)
     expect(game.getScorePile().size()).toBe(0)
-    expect(game.getTableauPile(2)?.active.size()).toBe(2)
+    expect(game.getTableauPile(2)?.size()).toBe(2)
 
     expect(game.getScore()).toBe(3)
 })
@@ -111,33 +111,35 @@ test("RevealFromTableauPile", () => {
     const game = new Game
     game.getScorePile().add(Cards._9c)
 
-    expect(game.getTableauPile(6)?.active.size()).toBe(1)
+    expect(game.getTableauPile(6)?.size()).toBe(1)
     const move = Moves.RevealFromTableauPile(6)
     expect(() => game.makeMove(move)).toThrow()
-    expect(game.getTableauPile(6)?.active.size()).toBe(1)
+    expect(game.getTableauPile(6)?.size()).toBe(1)
 
-    game.getTableauPile(6)?.active.clear()
-    expect(game.getTableauPile(6)?.active.size()).toBe(0)
-    expect(game.getTableauPile(6)?.hidden.size()).toBe(6)
+    game.getTableauPile(6)?.clear()
+    expect(game.getTableauPile(6)?.size()).toBe(0)
+    expect(game.getTableauPile(6)?.hiddenRemaining()).toBe(6)
     game.makeMove(move)
-    expect(game.getTableauPile(6)?.active.size()).toBe(1)
-    expect(game.getTableauPile(6)?.hidden.size()).toBe(5)
+    expect(game.getTableauPile(6)?.size()).toBe(1)
+    expect(game.getTableauPile(6)?.hiddenRemaining()).toBe(5)
 
-    game.getTableauPile(6)?.active.clear()
-    game.getTableauPile(6)?.hidden.clear()
-    expect(game.getTableauPile(6)?.active.size()).toBe(0)
-    expect(game.getTableauPile(6)?.hidden.size()).toBe(0)
+    while (!game.getTableauPile(6)?.depleted()) {
+        game.getTableauPile(6)?.clear()
+         game.getTableauPile(6)?.reveal()
+    }
+    expect(game.getTableauPile(6)?.size()).toBe(0)
+    expect(game.getTableauPile(6)?.hiddenRemaining()).toBe(0)
     expect(() => game.makeMove(move)).toThrow()
-    expect(game.getTableauPile(6)?.active.size()).toBe(0)
-    expect(game.getTableauPile(6)?.hidden.size()).toBe(0)
+    expect(game.getTableauPile(6)?.size()).toBe(0)
+    expect(game.getTableauPile(6)?.hiddenRemaining()).toBe(0)
 
     expect(game.getScore()).toBe(0)
 })
 
 test("TableauPileToFoundationPile", () => {
     const game = new Game
-    game.getTableauPile(0)?.active.clear()
-    game.getTableauPile(0)?.active.add(Cards._Jd)
+    game.getTableauPile(0)?.clear()
+    game.getTableauPile(0)?.add(Cards._Jd)
     game.getFoundationPile(0)?.clear()
     game.getFoundationPile(0)?.add(Cards._Qd)
     game.getScorePile().add(Cards._9c)
@@ -147,18 +149,18 @@ test("TableauPileToFoundationPile", () => {
     expect(() => game.makeMove(badTableauMove)).toThrow()
     expect(game.getFoundationPile(0)?.size()).toBe(1)
 
-    expect(game.getTableauPile(0)?.active.size()).toBe(1)
+    expect(game.getTableauPile(0)?.size()).toBe(1)
     const badFoundationMove = Moves.TableauPileToFoundationPile(0, 8)
     expect(() => game.makeMove(badFoundationMove)).toThrow()
-    expect(game.getTableauPile(0)?.active.size()).toBe(1)
+    expect(game.getTableauPile(0)?.size()).toBe(1)
 
     const move = Moves.TableauPileToFoundationPile(0, 0)
     game.makeMove(move)
-    expect(game.getTableauPile(0)?.active.size()).toBe(0)
+    expect(game.getTableauPile(0)?.size()).toBe(0)
     expect(game.getFoundationPile(0)?.size()).toBe(2)
 
     expect(() => game.makeMove(move)).toThrow()
-    expect(game.getTableauPile(0)?.active.size()).toBe(0)
+    expect(game.getTableauPile(0)?.size()).toBe(0)
     expect(game.getFoundationPile(0)?.size()).toBe(2)
 
     expect(game.getScore()).toBe(1)
@@ -166,24 +168,24 @@ test("TableauPileToFoundationPile", () => {
 
 test("TableauPileToTableauPile", () => {
     const game = new Game
-    game.getTableauPile(3)?.active.clear()
-    game.getTableauPile(3)?.active.add(Cards._5h)
-    game.getTableauPile(4)?.active.clear()
-    game.getTableauPile(4)?.active.add(Cards._4h)
+    game.getTableauPile(3)?.clear()
+    game.getTableauPile(3)?.add(Cards._5h)
+    game.getTableauPile(4)?.clear()
+    game.getTableauPile(4)?.add(Cards._4h)
     game.getScorePile().add(Cards._9c)
 
     const badSameMove = Moves.TableauPileToTableauPile(3, 3)
     expect(() => game.makeMove(badSameMove)).toThrow()
-    expect(game.getTableauPile(3)?.active.size()).toBe(1)
+    expect(game.getTableauPile(3)?.size()).toBe(1)
 
     const move = Moves.TableauPileToTableauPile(3, 4)
     game.makeMove(move)
-    expect(game.getTableauPile(3)?.active.size()).toBe(0)
-    expect(game.getTableauPile(4)?.active.size()).toBe(2)
+    expect(game.getTableauPile(3)?.size()).toBe(0)
+    expect(game.getTableauPile(4)?.size()).toBe(2)
 
     expect(() => game.makeMove(move)).toThrow()
-    expect(game.getTableauPile(3)?.active.size()).toBe(0)
-    expect(game.getTableauPile(4)?.active.size()).toBe(2)
+    expect(game.getTableauPile(3)?.size()).toBe(0)
+    expect(game.getTableauPile(4)?.size()).toBe(2)
 
     expect(game.getScore()).toBe(0)
 })
@@ -192,28 +194,28 @@ test("TableauPileToScorePile", () => {
     const game = new Game
     game.getScorePile().add(Cards._9c)
 
-    expect(game.getTableauPile(5)?.active.size()).toBe(1)
+    expect(game.getTableauPile(5)?.size()).toBe(1)
     const badPileMove = Moves.TableauPileToScorePile(9)
     expect(() => game.makeMove(badPileMove)).toThrow()
-    expect(game.getTableauPile(5)?.active.size()).toBe(1)
+    expect(game.getTableauPile(5)?.size()).toBe(1)
     expect(game.getScorePile().size()).toBe(1)
 
-    game.getTableauPile(5)?.active.clear()
-    expect(game.getTableauPile(5)?.active.size()).toBe(0)
+    game.getTableauPile(5)?.clear()
+    expect(game.getTableauPile(5)?.size()).toBe(0)
     const move = Moves.TableauPileToScorePile(5)
     expect(() => game.makeMove(move)).toThrow()
-    expect(game.getTableauPile(5)?.active.size()).toBe(0)
+    expect(game.getTableauPile(5)?.size()).toBe(0)
     expect(game.getScorePile().size()).toBe(1)
 
-    game.getTableauPile(5)?.active.add(Cards._5s)
-    expect(game.getTableauPile(5)?.active.size()).toBe(1)
+    game.getTableauPile(5)?.add(Cards._5s)
+    expect(game.getTableauPile(5)?.size()).toBe(1)
     expect(() => game.makeMove(move)).toThrow()
-    expect(game.getTableauPile(5)?.active.size()).toBe(1)
+    expect(game.getTableauPile(5)?.size()).toBe(1)
     expect(game.getScorePile().size()).toBe(1)
 
     while (!game.getStockPile().empty()) game.getStockPile().deal()
     game.makeMove(move)
-    expect(game.getTableauPile(5)?.active.size()).toBe(0)
+    expect(game.getTableauPile(5)?.size()).toBe(0)
     expect(game.getScorePile().size()).toBe(2)
 
     expect(game.getScore()).toBe(0)

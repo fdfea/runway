@@ -1,4 +1,4 @@
-import { Card, CardPile, Deck, Decks, HasCards, Rank, Ranks, SuitedConsecutiveCardSet, Suits, UnorderedCardSet } from './cards'
+import { Card, Deck, Decks, Rank, Ranks, SuitedConsecutiveCardSet, Suits, UnorderedCardSet } from './cards'
 import { Move } from './moves'
 import { lift } from './utils'
 
@@ -14,7 +14,7 @@ export class FoundationPile extends SuitedConsecutiveCardSet {
 
     override toString(): string {
         if (this.complete()) {
-            return `[${this.bottom()} ✓]`
+            return `[${this.front()?.suit} ✓]`
         } else {
             return super.toString()
         }
@@ -25,7 +25,7 @@ export class TableauPile extends SuitedConsecutiveCardSet {
     private readonly hidden: UnorderedCardSet
 
     constructor(cards: Iterable<Card>) {
-        super()
+        super(undefined, false)
         this.hidden = new UnorderedCardSet(cards)
         this.reveal()
     }
@@ -36,6 +36,10 @@ export class TableauPile extends SuitedConsecutiveCardSet {
         } else {
             return false
         }
+    }
+
+    hiddenRemaining(): number {
+        return this.hidden.size()
     }
 
     depleted(): boolean {
@@ -62,7 +66,6 @@ export class Game {
         deck.shuffle()
 
         this.foundationPiles = [...Suits.All].map(suit => new FoundationPile(new Card(Rank.Ace, suit)))
-
         this.tableauPiles = new Array(Game.TableauPiles)
         for (let i = 0; i < this.tableauPiles.length; i++) {
             const cards: Array<Card> = []
@@ -81,7 +84,7 @@ export class Game {
     }
 
     finished(): boolean {
-        return [...this.foundationPiles.values()].every(pile => pile.complete())
+        return this.foundationPiles.values().every(pile => pile.complete())
     }
 
     addScore(score: number): void {
