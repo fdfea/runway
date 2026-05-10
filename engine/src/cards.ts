@@ -67,6 +67,14 @@ export class Ranks {
         return Ranks.ConsecutiveRankLookup[rank1.valueOf()].some(value => value === rank2)
     }
 
+    static consecutiveAscending(rank1: Rank, rank2: Rank) {
+        return Ranks.ConsecutiveRankLookup[rank1.valueOf()][1] === rank2
+    }
+
+    static consecutiveDescending(rank1: Rank, rank2: Rank) {
+        return Ranks.ConsecutiveRankLookup[rank1.valueOf()][0] === rank2
+    }
+
     private static readonly RankLookup: { [key: string]: Rank } = {
         2: Rank.Two,
         3: Rank.Three,
@@ -132,6 +140,14 @@ export class Card {
 
     suitedConsecutive(card: Card): boolean {
         return this.sameSuit(card) && this.consecutive(card)
+    }
+
+    suitedConsecutiveAscending(card: Card): boolean {
+        return this.sameSuit(card) && Ranks.consecutiveAscending(this.rank, card.rank)
+    }
+
+    suitedConsecutiveDescending(card: Card): boolean {
+        return this.sameSuit(card) && Ranks.consecutiveDescending(this.rank, card.rank)
     }
 
     toString(): string {
@@ -267,51 +283,11 @@ export class Cards {
     }
 }
 
-export interface HasCards extends Iterable<Card> {
-    [Symbol.iterator](): IterableIterator<Card>
-    contains(card: Card): boolean
-    size(): number
-    empty(): boolean
-}
-
-export interface CardPile extends HasCards {
-    add(card: Card): boolean
-    merge(cards: HasCards): boolean
-    remove(card: Card): boolean
-    clear(): boolean
-}
-
-export interface SortedCardPile extends CardPile {
-    top(): Card | undefined
-    bottom(): Card | undefined
-}
-
-export abstract class CardSet extends Object implements HasCards {
-    protected cards: Set<Card>
-
-    constructor()
-    constructor(cards: Iterable<Card>)
-
-    constructor(cards?: Iterable<Card>) {
-        super()
-        this.cards = new Set(cards ?? [])
-    }
-    
-    [Symbol.iterator](): IterableIterator<Card> {
-        return this.cards[Symbol.iterator]()
-    }
-
-    contains(card: Card): boolean {
-        return this.cards.has(card)
-    }
-
-    size(): number {
-        return this.cards.size
-    }
-
-    empty(): boolean {
-        return !this.size()
-    }
+export abstract class HasCards {
+    abstract [Symbol.iterator](): IterableIterator<Card>
+    abstract contains(card: Card): boolean
+    abstract size(): number
+    abstract empty(): boolean
 
     suits(): Set<Suit> {
         return new Set([...this].map(card => card.suit))
@@ -322,118 +298,58 @@ export abstract class CardSet extends Object implements HasCards {
     }
 
     readonly(): ReadonlySet<Card> {
-        return this.cards
+        return new Set([...this])
     }
 }
 
-export class MutableCardSet extends CardSet implements CardPile {
-    add(card: Card): boolean {
-        if (!this.contains(card)) {
-            this.cards.add(card)
-            return true
-        }
-        return false
-    }
-
-    merge(cards: HasCards): boolean {
-        const prevSize = this.size()
-        this.cards = this.cards.union(new Set([...cards]))
-        return this.size() > prevSize
-    }
-    
-    remove(card: Card): boolean {
-        return this.cards.delete(card)
-    }
-
-    clear(): boolean {
-        const wasEmpty = this.empty()
-        this.cards = new Set
-        return !wasEmpty
-    }
-
-    override toString(): string {
-        return `[${[...this.cards].join(", ")}]`
-    }
+export interface CardPile extends HasCards {
+    add(card: Card): boolean
+    merge(cards: HasCards): boolean
+    clear(): boolean
 }
 
-export class SortedCardSet extends Object implements SortedCardPile {
-    protected cards: TreeIndex<Card>
+export interface SortedCardPile extends CardPile {
+    top(): Card | undefined
+    bottom(): Card | undefined
+}
+
+export class CardSet extends HasCards {
+    protected cards: Set<Card>
 
     constructor()
     constructor(cards: Iterable<Card>)
 
     constructor(cards?: Iterable<Card>) {
         super()
-        this.cards = SortedCardSet.new(cards)
+        this.cards = new Set(cards ?? [])
     }
-
-    [Symbol.iterator](): IterableIterator<Card> {
+    
+    override [Symbol.iterator](): IterableIterator<Card> {
         return this.cards[Symbol.iterator]()
     }
 
-    contains(card: Card): boolean {
+    override contains(card: Card): boolean {
         return this.cards.has(card)
     }
 
-    size(): number {
+    override size(): number {
         return this.cards.size
     }
 
-    empty(): boolean {
+    override empty(): boolean {
         return !this.size()
     }
 
-    add(card: Card): boolean {
-        return this.cards.add(card)[0]
-    }
-
-    merge(cards: HasCards): boolean {
-        const prevSize = this.size()
-        this.cards = SortedCardSet.new([...this.cards, ...cards])
-        return this.size() > prevSize
-    }
-
-    remove(card: Card): boolean {
-        return this.cards.delete(card)
-    }
-
-    clear(): boolean {
-        const wasEmpty = this.empty()
-        this.cards = SortedCardSet.new(undefined)
-        return !wasEmpty
-    }
-
-    top(): Card | undefined {
-        return this.cards.begin()?.value
-    }
-
-    bottom(): Card | undefined {
-        return this.cards.end()?.value
-    }
-
-    override toString(): string {
-        return ""
-    }
-
-    private static new(cards?: Iterable<Card>): TreeIndex<Card> {
-        return new TreeIndex({ 
-            elements: cards,
-            allowDuplicates: false,
-            compareKeys: (c1, c2) => Cards.compare(c1, c2) > 0,
-            isEqual: (c1, c2) => Cards.compare(c1, c2) === 0
-        })
+    override readonly(): ReadonlySet<Card> {
+        return this.cards
     }
 }
 
 export class Deck extends CardSet {
-    draw(): Card | undefined {
+    deal(): Card | undefined {
         const [top, ...remaining] = this
         this.cards = new Set(remaining)
         return top
-    }
-
-    deal(): Card | undefined {
-        return this.draw()
     }
 
     shuffle(): void {
@@ -464,5 +380,211 @@ export class Decks {
         deck.remove(Cards._Ah)
         deck.remove(Cards._As)
         return deck
+    }
+}
+
+export class UnorderedCardSet extends CardSet implements CardPile {
+    draw(): Card | undefined {
+        const [top, ...remaining] = this
+        this.cards = new Set(remaining)
+        return top
+    }
+
+    add(card: Card): boolean {
+        if (!this.contains(card)) {
+            this.cards.add(card)
+            return true
+        }
+        return false
+    }
+
+    merge(cards: HasCards): boolean {
+        const prevSize = this.size()
+        this.cards = this.cards.union(new Set([...cards]))
+        return this.size() > prevSize
+    }
+    
+    remove(card: Card): boolean {
+        return this.cards.delete(card)
+    }
+
+    clear(): boolean {
+        const wasEmpty = this.empty()
+        this.cards = new Set
+        return !wasEmpty
+    }
+
+    override toString(): string {
+        return `[${[...this.cards].join(", ")}]`
+    }
+}
+
+export class SortedCardSet extends HasCards implements SortedCardPile {
+    protected cards: TreeIndex<Card>
+
+    constructor()
+    constructor(cards: Iterable<Card>)
+
+    constructor(cards?: Iterable<Card>) {
+        super()
+        this.cards = SortedCardSet.new(cards)
+    }
+
+    [Symbol.iterator](): IterableIterator<Card> {
+        return this.cards[Symbol.iterator]()
+    }
+
+    override contains(card: Card): boolean {
+        return this.cards.has(card)
+    }
+
+    override size(): number {
+        return this.cards.size
+    }
+
+    override empty(): boolean {
+        return !this.size()
+    }
+
+    add(card: Card): boolean {
+        return this.cards.add(card)[0]
+    }
+
+    merge(cards: HasCards): boolean {
+        const prevSize = this.size()
+        this.cards = SortedCardSet.new([...this.cards, ...cards])
+        return this.size() > prevSize
+    }
+
+    clear(): boolean {
+        const wasEmpty = this.empty()
+        this.cards = SortedCardSet.new(undefined)
+        return !wasEmpty
+    }
+
+    top(): Card | undefined {
+        return this.cards.begin()?.value
+    }
+
+    bottom(): Card | undefined {
+        return this.cards.end()?.value
+    }
+
+    protected static new(cards?: Iterable<Card>): TreeIndex<Card> {
+        return new TreeIndex({ 
+            elements: cards,
+            allowDuplicates: false,
+            getKey: elem => elem,
+            compareKeys: (c1, c2) => Cards.compare(c1, c2) > 0,
+            isEqual: (c1, c2) => Cards.compare(c1, c2) === 0
+        })
+    }
+}
+
+enum Direction {
+    BIDIRECTIONAL,
+    ASCENDING,
+    DESCENDING,
+    UNKNOWN
+}
+
+export class SuitedConsecutiveCardSet extends SortedCardSet {
+    protected direction: Direction
+
+    constructor(card?: Card, birdectional: boolean = true) {
+        super(SortedCardSet.new(card ? [card] : []))
+        this.direction = birdectional ? Direction.BIDIRECTIONAL : Direction.UNKNOWN
+    }
+
+    override [Symbol.iterator](): IterableIterator<Card> {
+        const array = [...this.cards]
+        if (this.direction === Direction.DESCENDING) {
+            return array.reverse().values()
+        } else {
+            return array.values()
+        }
+    }
+
+    override add(card: Card): boolean {
+        if (this.empty()) {
+            return super.add(card)
+        }
+        let added = false
+        const consecutiveAscending = this.top()?.suitedConsecutiveAscending(card)
+        const consecutiveDescending = this.bottom()?.suitedConsecutiveDescending(card)
+        switch (this.direction) {
+            case Direction.BIDIRECTIONAL:
+                if (consecutiveAscending || consecutiveDescending) {
+                    added = super.add(card)
+                } break
+            case Direction.ASCENDING:
+                if (consecutiveAscending) {
+                    added = super.add(card)
+                } break
+            case Direction.DESCENDING:
+                if (consecutiveDescending) {
+                    added = super.add(card)
+                } break
+            case Direction.UNKNOWN:
+                if (consecutiveAscending) {
+                    this.direction = Direction.ASCENDING
+                    added = super.add(card)
+                } else if (consecutiveDescending) {
+                    this.direction = Direction.DESCENDING
+                    added = super.add(card)
+                } break
+        }
+        return added
+    }
+
+    override merge(cards: SuitedConsecutiveCardSet): boolean {
+        if (cards.empty()) {
+            return false
+        } else if (this.empty()) {
+            if (this.direction === Direction.UNKNOWN) {
+                this.direction = cards.direction
+            }
+            return super.merge(cards)
+        }
+        let merged = false
+        const consecAscTop = this.top()?.suitedConsecutiveAscending(cards.top()!)
+        const consecAscBottom = this.top()?.suitedConsecutiveAscending(cards.bottom()!)
+        const consecDescTop = this.bottom()?.suitedConsecutiveDescending(cards.top()!)
+        const consecDescBottom = this.bottom()?.suitedConsecutiveDescending(cards.bottom()!)
+        switch (this.direction) {
+            case Direction.BIDIRECTIONAL:
+                if (consecAscTop || consecAscBottom || consecDescTop || consecDescBottom) {
+                    merged = super.merge(cards)
+                } break
+            case Direction.ASCENDING:
+                if (consecAscTop || consecAscBottom) {
+                    merged = super.merge(cards)
+                } break
+            case Direction.DESCENDING:
+                if (consecDescTop || consecDescBottom) {
+                    merged = super.merge(cards)
+                } break
+        }
+        return merged
+    }
+
+    override clear(): boolean {
+        if (this.direction !== Direction.BIDIRECTIONAL) {
+            this.direction = Direction.UNKNOWN
+        }
+        return super.clear()
+    }
+
+    override toString(): string {
+        switch (this.direction) {
+            case Direction.BIDIRECTIONAL:
+                return `[${this.bottom()} <-> ${this.top()}]`
+            case Direction.ASCENDING:
+                return `[${this.bottom()} -> ${this.top()}]`
+            case Direction.DESCENDING:
+                return `[${this.top()} -> ${this.bottom()}]`
+            case Direction.UNKNOWN:
+                return "[]"
+        }
     }
 }

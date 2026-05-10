@@ -1,36 +1,49 @@
-import { Card, CardPile, Decks, Rank, Suits, SuitedConsecutiveCards, UnorderedCardPile } from './cards'
+import { Card, CardPile, Deck, Decks, HasCards, Rank, Ranks, SuitedConsecutiveCardSet, Suits, UnorderedCardSet } from './cards'
 import { Move } from './moves'
 import { lift } from './utils'
 
-export class FoundationPile extends SuitedConsecutiveCards {
+export class FoundationPile extends SuitedConsecutiveCardSet {
+
     constructor(card: Card) {
         super(card)
     }
-}
 
-export class TableauPile {
-    readonly hidden: CardPile
-    readonly active: SuitedConsecutiveCards
-
-    constructor() {
-        this.hidden = new CardPile
-        this.active = new SuitedConsecutiveCards
+    complete(): boolean {
+        return [...Ranks.All].every(rank => this.ranks().has(rank))
     }
 
-    empty(): boolean {
-        return this.hidden.empty() && this.active.empty()
+    override toString(): string {
+        if (this.complete()) {
+            return `[${this.bottom()} ✓]`
+        } else {
+            return super.toString()
+        }
+    }
+}
+
+export class TableauPile extends SuitedConsecutiveCardSet {
+    private readonly hidden: UnorderedCardSet
+
+    constructor(cards: Iterable<Card>) {
+        super()
+        this.hidden = new UnorderedCardSet(cards)
+        this.reveal()
     }
 
     reveal(): boolean {
-        if (this.active.empty() && lift(this.hidden.draw(), card => this.active.add(card))) {
+        if (this.empty() && lift(this.hidden.draw(), card => this.add(card))) {
             return true
         } else {
             return false
         }
     }
 
-    toString(): string {
-        return `[${this.hidden}, ${this.active}]`
+    depleted(): boolean {
+        return this.empty() && this.hidden.empty()
+    }
+
+    override toString(): string {
+        return `[${this.hidden}, ${super.toString()}]`
     }
 }
 
@@ -39,8 +52,8 @@ export class Game {
 
     private readonly foundationPiles: FoundationPile[]
     private readonly tableauPiles: TableauPile[]
-    private readonly scorePile: UnorderedCardPile
-    private readonly stockPile: CardPile
+    private readonly scorePile: UnorderedCardSet
+    private readonly stockPile: Deck
 
     private score: number = 0
 
@@ -52,15 +65,15 @@ export class Game {
 
         this.tableauPiles = new Array(Game.TableauPiles)
         for (let i = 0; i < this.tableauPiles.length; i++) {
-            this.tableauPiles[i] = new TableauPile
+            const cards: Array<Card> = []
             for (let j = this.tableauPiles.length; j >= this.tableauPiles.length - i; j--) {
-                lift(deck.deal(), card => this.tableauPiles[i].hidden.add(card))
+                lift(deck.deal(), card => cards.push(card))
             }
-            lift(this.tableauPiles[i].hidden.draw(), card => this.tableauPiles[i].active.add(card))
+            this.tableauPiles[i] = new TableauPile(cards)
         }
 
-        this.stockPile = new CardPile([...deck])
-        this.scorePile = new UnorderedCardPile
+        this.scorePile = new UnorderedCardSet
+        this.stockPile = deck
     }
 
     makeMove(move: Move): void {
@@ -95,11 +108,11 @@ export class Game {
         return this.tableauPiles
     }
 
-    getScorePile(): UnorderedCardPile {
+    getScorePile(): UnorderedCardSet {
         return this.scorePile
     }
 
-    getStockPile(): CardPile {
+    getStockPile(): Deck {
         return this.stockPile
     }
 }

@@ -1,5 +1,5 @@
 import 'jest-extended'
-import { Cards, CardPile, Decks, Rank, Ranks, Suit, SuitedConsecutiveCards, Suits, UnorderedCardPile } from '../src/cards'
+import { Cards, Decks, Rank, Ranks, Suit, SuitedConsecutiveCardSet, Suits, UnorderedCardSet } from '../src/cards'
 
 test("Suits", () => {
     expect(Suits.All.size).toBe(4)
@@ -60,7 +60,6 @@ test("Standard deck", () => {
     const deck = Decks.standard()
     expect(deck.size()).toBe(52)
     expect(deck.empty()).toBeFalse()
-    expect(deck.add(Cards._Ac)).toBeFalse()
     expect(deck.remove(Cards._Ad)).toBeTrue()
 
     const card = deck.deal()
@@ -74,39 +73,21 @@ test("Standard deck", () => {
 
     expect([...deck.ranks()]).toIncludeSameMembers([...Ranks.All])
     expect([...deck.suits()]).toIncludeSameMembers([...Suits.All])
-
-    deck.clear()
-    expect(deck.size()).toBe(0)
 })
 
-test("UnorderedCardPile", () => {
-    const cards1 = new UnorderedCardPile([Cards._7d, Cards._2d])
-    const cards2 = new UnorderedCardPile([Cards._3h, Cards._6s, Cards._7d])
+test("UnorderedCardSet", () => {
+    const cards1 = new UnorderedCardSet([Cards._7d, Cards._2d])
+    const cards2 = new UnorderedCardSet([Cards._3h, Cards._6s, Cards._7d])
     expect(cards1.size()).toBe(2)
     expect(cards2.size()).toBe(3)
 
-    cards1.addAll(cards2)
+    cards1.merge(cards2)
     expect(cards1.size()).toBe(4)
     expect(cards2.size()).toBe(3)
 })
 
-test("CardPile", () => {
-    const cards = new CardPile([Cards._3h, Cards._6s, Cards._As, Cards._6d, Cards._7d])
-    expect(cards.top()).toBe(Cards._7d)
-    expect(cards.bottom()).toBe(Cards._3h)
-
-    const card1 = cards.draw()
-    expect(card1).toBe(Cards._7d)
-
-    const card2 = cards.draw()
-    expect(card2).toBe(Cards._6d)
-
-    expect(cards.top()).toBe(Cards._As)
-    expect(cards.bottom()).toBe(Cards._3h)
-})
-
-test("SuitedConsecutiveCards", () => {
-    const cards1 = new SuitedConsecutiveCards(Cards._Ah)
+test("SuitedConsecutiveCardSet", () => {
+    const cards1 = new SuitedConsecutiveCardSet(Cards._Ah)
     expect(cards1.size()).toBe(1)
     expect(cards1.add(Cards._2h)).toBeTrue()
     expect(cards1.add(Cards._2h)).toBeFalse()
@@ -117,7 +98,7 @@ test("SuitedConsecutiveCards", () => {
     expect(cards1.top()).toBe(Cards._3h)
     expect(cards1.bottom()).toBe(Cards._Ah)
 
-    const cards2 = new SuitedConsecutiveCards(Cards._5h)
+    const cards2 = new SuitedConsecutiveCardSet(Cards._5h)
     expect(cards2.size()).toBe(1)
     expect(cards2.add(Cards._4h)).toBeTrue()
     expect(cards2.add(Cards._6h)).toBeFalse()
@@ -130,14 +111,14 @@ test("SuitedConsecutiveCards", () => {
     expect(cards1.top()).toBe(Cards._5h)
     expect(cards1.bottom()).toBe(Cards._Ah)
 
-    const cards3 = new SuitedConsecutiveCards()
+    const cards3 = new SuitedConsecutiveCardSet()
     expect(cards3.size()).toBe(0)
     expect(cards1.merge(cards3)).toBeFalse()
     expect(cards1.size()).toBe(5)
     expect(cards3.merge(cards1)).toBeTrue()
     expect(cards3.size()).toBe(5)
 
-    const cards4 = new SuitedConsecutiveCards(Cards._6h)
+    const cards4 = new SuitedConsecutiveCardSet(Cards._6h)
     expect(cards4.add(Cards._7h)).toBeTrue()
     expect(cards4.add(Cards._8h)).toBeTrue()
     expect(cards4.add(Cards._9h)).toBeTrue()
@@ -151,8 +132,4 @@ test("SuitedConsecutiveCards", () => {
     expect(cards3.merge(cards4)).toBeTrue()
     expect(cards3.top()).toBe(Cards._Kh)
     expect(cards3.bottom()).toBe(Cards._Ah)
-    expect(cards3.complete()).toBeTrue()
-
-    expect(cards3.clear()).toBeTrue()
-    expect(cards3.complete()).toBeFalse()
 })

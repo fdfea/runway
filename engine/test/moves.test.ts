@@ -13,7 +13,7 @@ test("StockPileToScorePile", () => {
     expect(game.getStockPile().size()).toBe(19)
     expect(game.getScorePile().size()).toBe(1)
 
-    game.getStockPile().clear()
+    while (!game.getStockPile().empty()) game.getStockPile().deal()
     expect(() => game.makeMove(move)).toThrow()
     expect(game.getStockPile().size()).toBe(0)
     expect(game.getScorePile().size()).toBe(1)
@@ -40,7 +40,7 @@ test("StockPileToTableauPile", () => {
     expect(game.getStockPile().size()).toBe(19)
     expect(game.getTableauPile(1)?.active.size()).toBe(1)
 
-    game.getStockPile().clear()
+    while (!game.getStockPile().empty()) game.getStockPile().deal()
     game.getTableauPile(1)?.active.clear()
     expect(game.getStockPile().size()).toBe(0)
     expect(game.getTableauPile(1)?.active.size()).toBe(0)
@@ -211,7 +211,7 @@ test("TableauPileToScorePile", () => {
     expect(game.getTableauPile(5)?.active.size()).toBe(1)
     expect(game.getScorePile().size()).toBe(1)
 
-    game.getStockPile().clear()
+    while (!game.getStockPile().empty()) game.getStockPile().deal()
     game.makeMove(move)
     expect(game.getTableauPile(5)?.active.size()).toBe(0)
     expect(game.getScorePile().size()).toBe(2)

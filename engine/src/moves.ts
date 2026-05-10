@@ -64,7 +64,7 @@ class ScoringMove extends DelegatingMove {
 
 class StockPileToScorePile implements Move {
     apply(game: Game): void {
-        const card = game.getStockPile().draw()
+        const card = game.getStockPile().deal()
         if (!card) {
             throw new Error("Cannot draw card from stock pile")
         } else {
@@ -85,14 +85,14 @@ class StockPileToTableauPile implements Move {
         if (!tableauPile) {
             throw Error(`Tableau pile ${this.tableauPosition} does not exist`)
         }
-        if (!tableauPile.active.empty()) {
+        if (!tableauPile.empty()) {
             throw Error(`Tableau pile ${this.tableauPosition} is not available`)
         }
-        const card = game.getStockPile().draw()
+        const card = game.getStockPile().deal()
         if (!card) {
             throw Error("Cannot draw card from stock pile")
         }
-        tableauPile.active.add(card)
+        tableauPile.add(card)
     }
 }
 
@@ -114,7 +114,7 @@ class ScorePileToTableauPile implements Move {
         if(!scorePile.contains(this.scorePileCard)) {
             throw Error(`Score pile does not contain card ${this.scorePileCard}`)
         }
-        const added = tableauPile.active.add(this.scorePileCard)
+        const added = tableauPile.add(this.scorePileCard)
         if (!added) {
             throw Error(`Cannot add ${this.scorePileCard} to tableau pile ${this.tableauPosition}`)
         }
@@ -160,14 +160,13 @@ class RevealFromTableauPile implements Move {
         if (!tableauPile) {
             throw Error(`Tableau pile ${this.tableauPosition} does not exist`)
         }
-        if (!tableauPile.active.empty()) {
+        if (!tableauPile.empty()) {
             throw Error(`Cannot reveal card from tableau pile ${this.tableauPosition} because it has active cards`)
         }
-        if (tableauPile.hidden.empty()) {
+        if (tableauPile.depleted()) {
             throw Error(`Cannot reveal card from tableau pile ${this.tableauPosition} because it is empty`)
         }
-        const card = tableauPile.hidden.draw()!
-        tableauPile.active.add(card)
+        tableauPile.reveal()
     }
 }
 
@@ -189,13 +188,13 @@ class TableauPileToFoundationPile implements Move {
         if (!foundationPile) {
             throw Error(`Foundation pile ${this.foundationPosition} does not exist`)
         }
-        if (tableauPile.active.empty()) {
+        if (tableauPile.empty()) {
             throw Error(`Tableau pile ${this.tableauPosition} has no active cards`)
         }
-        if (!foundationPile.merge(tableauPile.active)) {
+        if (!foundationPile.merge(tableauPile)) {
             throw Error(`Tableau pile ${this.tableauPosition} cannot be merged into foundation pile ${this.foundationPosition}`)
         }
-        tableauPile.active.clear()
+        tableauPile.clear()
     }
 }
 
@@ -220,13 +219,13 @@ class TableauPileToTableauPile implements Move {
         if (this.fromTableauPosition === this.toTableauPosition) {
             throw Error(`Tableau pile ${this.fromTableauPosition} cannot merge into itself`)
         }
-        if (fromTableauPile.active.empty()) {
+        if (fromTableauPile.empty()) {
             throw Error(`Tableau pile ${this.fromTableauPosition} has no active cards`)
         }
-        if (!toTableauPile.active.merge(fromTableauPile.active)) {
+        if (!toTableauPile.merge(fromTableauPile)) {
             throw Error(`Tableau pile ${this.fromTableauPosition} cannot be merged into tableau pile ${this.toTableauPosition}`)
         }
-        fromTableauPile.active.clear()
+        fromTableauPile.clear()
     }
 }
 
@@ -242,13 +241,13 @@ class TableauPileToScorePile implements Move {
         if (!tableauPile) {
             throw Error(`Tableau pile ${this.tableauPosition} does not exist`)
         }
-        if (tableauPile.active.empty()) {
+        if (tableauPile.empty()) {
             throw Error(`Tableau pile ${this.tableauPosition} has no active cards`)
         }
         if (!game.getStockPile().empty()) {
             throw Error("Cannot move cards from tableau pile to score pile unless stock pile is empty")
         }
-        game.getScorePile().addAll(tableauPile.active)
-        tableauPile.active.clear()
+        game.getScorePile().merge(tableauPile)
+        tableauPile.clear()
     }
 }

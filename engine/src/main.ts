@@ -1,5 +1,5 @@
 import Readline from 'readline-sync'
-import { Cards, CardPile, UnorderedCardPile } from './cards'
+import { Cards, Deck, UnorderedCardSet } from './cards'
 import { FoundationPile, Game, TableauPile } from './game'
 import { Move, Moves } from './moves'
 import { Component, ComponentRegistry } from './utils'
@@ -19,8 +19,8 @@ const foundationPileComponents: Array<Component<FoundationPileIndex>> =
     game.getFoundationPiles().map((pile, i) => registry.register(new FoundationPileIndex(i, pile)))
 const tableauPileComponents: Array<Component<TableauPileIndex>> =
     game.getTableauPiles().map((pile, i) => registry.register(new TableauPileIndex(i, pile)))
-const scorePileComponent: Component<UnorderedCardPile> = registry.register(game.getScorePile())
-const stockPileComponent: Component<CardPile> = registry.register(game.getStockPile())
+const scorePileComponent: Component<UnorderedCardSet> = registry.register(game.getScorePile())
+const stockPileComponent: Component<Deck> = registry.register(game.getStockPile())
 
 console.log("Welcome to Game!")
 
@@ -72,31 +72,31 @@ function readMove(moveStr: string): Move | undefined {
         return Moves.TableauPileToTableauPile(fromIndex, toIndex)
     }
 
-    if (fromComponent instanceof TableauPileIndex && toComponent instanceof UnorderedCardPile) {
+    if (fromComponent instanceof TableauPileIndex && toComponent instanceof UnorderedCardSet) {
         const fromIndex = (fromComponent as TableauPileIndex).index
         return Moves.TableauPileToScorePile(fromIndex)
     }
 
-    if (fromComponent instanceof UnorderedCardPile && toComponent instanceof FoundationPileIndex) {
+    if (fromComponent instanceof UnorderedCardSet && toComponent instanceof FoundationPileIndex) {
         const toIndex = (toComponent as FoundationPileIndex).index
         if (card) {
             return Moves.ScorePileToFoundationPile(card, toIndex)
         }
     }
 
-    if (fromComponent instanceof UnorderedCardPile && toComponent instanceof TableauPileIndex) {
+    if (fromComponent instanceof UnorderedCardSet && toComponent instanceof TableauPileIndex) {
         const toIndex = (toComponent as TableauPileIndex).index
         if (card) {
             return Moves.ScorePileToTableauPile(card, toIndex)
         }
     }
 
-    if (fromComponent instanceof CardPile && toComponent instanceof TableauPileIndex) {
+    if (fromComponent instanceof Deck && toComponent instanceof TableauPileIndex) {
         const toIndex = (toComponent as TableauPileIndex).index
         return Moves.StockPileToTableauPile(toIndex)
     }
 
-    if (fromComponent instanceof CardPile && toComponent instanceof UnorderedCardPile) {
+    if (fromComponent instanceof Deck && toComponent instanceof UnorderedCardSet) {
         return Moves.StockPileToScorePile()
     }
 

@@ -1,5 +1,5 @@
 import 'jest-extended'
-import { Cards, Decks, Rank, Suits } from '../src/cards'
+import { Cards, Rank, Suits } from '../src/cards'
 import { Game, TableauPile } from '../src/game'
 
 test("TableauPile", () => {
@@ -9,8 +9,6 @@ test("TableauPile", () => {
     cards.hidden.add(Cards._9d)
     cards.hidden.add(Cards._Tc)
     expect(cards.hidden.size()).toBe(2)
-    expect(cards.hidden.top()).toBe(Cards._Tc)
-    expect(cards.hidden.bottom()).toBe(Cards._9d)
     expect(cards.active.size()).toBe(0)
     expect(cards.active.top()).toBe(undefined)
     expect(cards.active.bottom()).toBe(undefined)
@@ -18,8 +16,6 @@ test("TableauPile", () => {
     expect(cards.reveal()).toBeTrue()
     expect(cards.reveal()).toBeFalse()
     expect(cards.hidden.size()).toBe(1)
-    expect(cards.hidden.top()).toBe(Cards._9d)
-    expect(cards.hidden.bottom()).toBe(Cards._9d)
     expect(cards.active.size()).toBe(1)
     expect(cards.active.top()).toBe(Cards._Tc)
     expect(cards.active.bottom()).toBe(Cards._Tc)
