@@ -69,8 +69,8 @@ export class AdjacentList<T extends Comparable<T>> implements Iterable<T> {
             return this.addBack(item)
         }
         let added = false
-        const adjacentLeft = this.adjacentLeft(item)
         const adjacentRight = this.adjacentRight(item)
+        const adjacentLeft = this.adjacentLeft(item)
         switch (this._direction) {
             case Direction.BIDIRECTIONAL:
                 if (adjacentRight) {
@@ -109,17 +109,17 @@ export class AdjacentList<T extends Comparable<T>> implements Iterable<T> {
             return true
         }
         let merged = false
-        const leftAdjacentLeft = this.adjacentLeft(other.front()!)
-        const rightAdjacentLeft = this.adjacentLeft(other.back()!)
         const leftAdjacentRight = this.adjacentRight(other.front()!)
         const rightAdjacentRight = this.adjacentRight(other.back()!)
+        const leftAdjacentLeft = this.adjacentLeft(other.front()!)
+        const rightAdjacentLeft = this.adjacentLeft(other.back()!)
         switch (this._direction) {
             case Direction.BIDIRECTIONAL:
                 switch (true) {
-                    case leftAdjacentLeft: merged = this.combineFront(other.items.reverse()); break
-                    case rightAdjacentLeft: merged = this.combineFront(other.items); break
                     case leftAdjacentRight: merged = this.combineBack(other.items); break
                     case rightAdjacentRight: merged = this.combineBack(other.items.reverse()); break
+                    case leftAdjacentLeft: merged = this.combineFront(other.items.reverse()); break
+                    case rightAdjacentLeft: merged = this.combineFront(other.items); break
                 } break
             case Direction.ASCENDING:
                 switch (true) {
@@ -131,6 +131,19 @@ export class AdjacentList<T extends Comparable<T>> implements Iterable<T> {
                     case leftAdjacentLeft: merged = this.combineFront(other.items.reverse()); break
                     case rightAdjacentLeft: merged = this.combineFront(other.items); break
                 } break
+            case Direction.UNKNOWN:
+                switch (true) {
+                    /*
+                        [4], [1, 2, 3] -> RAR, LAR
+                        [4], [3, 2, 1] -> RAL, LAL
+                        if greater, ascending
+                        if lesser, descending
+                    */
+                    case leftAdjacentLeft:
+                    case leftAdjacentRight:
+                    case rightAdjacentRight:
+                    case rightAdjacentLeft:
+                }
         }
         return merged
     }
