@@ -23,32 +23,19 @@ export class ComponentRegistry {
 
 export interface Comparable<T> {
     compareTo(t: T): number
-    adjacentTo(t: T): boolean
-}
-
-export enum Direction {
-    BIDIRECTIONAL,
-    RIGHT,
-    LEFT,
-    UNKNOWN
 }
 
 export class AdjacentList<T extends Comparable<T>> implements Iterable<T> {
     protected items: T[]
-    protected _direction: Direction
+    protected bidirectional: boolean
 
     constructor(item?: T, birdectional: boolean = true) {
         this.items = item ? [item] : []
-        this._direction = birdectional ? Direction.BIDIRECTIONAL : Direction.UNKNOWN
+        this.bidirectional = birdectional
     }
 
     [Symbol.iterator](): IterableIterator<T> {
-        const array = [...this.items]
-        if (this._direction === Direction.LEFT) {
-            return array.reverse().values()
-        } else {
-            return array.values()
-        }
+        return this.items.values()
     }
 
     size(): number {
@@ -65,103 +52,27 @@ export class AdjacentList<T extends Comparable<T>> implements Iterable<T> {
     }
 
     add(item: T): boolean {
-        if (this.empty()) {
+        if (this.contains(item)) {
+            return false
+        } else if (this.empty() || this.adjacentRight(item)) {
             return this.addRight(item)
+        } else if (this.bidirectional && this.adjacentLeft(item)) {
+            return this.addLeft(item)
+        } else {
+            return false
         }
-        let added = false
-        const adjacentRight = this.adjacentRight(item)
-        const adjacentLeft = this.adjacentLeft(item)
-        switch (this._direction) {
-            case Direction.BIDIRECTIONAL:
-                if (adjacentRight) {
-                    added = this.addRight(item)
-                } else if (adjacentLeft) {
-                    added = this.addLeft(item)
-                } break
-            case Direction.RIGHT:
-                if (adjacentRight) {
-                    added = this.addRight(item)
-                } break
-            case Direction.LEFT:
-                if (adjacentLeft) {
-                    added = this.addLeft(item)
-                } break
-            case Direction.UNKNOWN:
-                if (adjacentRight) {
-                    this._direction = Direction.RIGHT
-                    added = this.addRight(item)
-                } else if (adjacentLeft) {
-                    this._direction = Direction.LEFT
-                    added = this.addLeft(item)
-                } break
-        }
-        return added
     }
 
     merge(other: AdjacentList<T>): boolean {
-        if (other.empty()) {
-            return false
-        } else if (this.empty()) {
-            if (this._direction === Direction.UNKNOWN) {
-                this.direction = other.direction
-            }
-            this.items = other.items
-            return true
-        }
-        let merged = false
-        const leftAdjacentRight = this.adjacentRight(other.left()!)
-        const rightAdjacentRight = this.adjacentRight(other.right()!)
-        const leftAdjacentLeft = this.adjacentLeft(other.left()!)
-        const rightAdjacentLeft = this.adjacentLeft(other.right()!)
-        switch (this._direction) {
-            case Direction.BIDIRECTIONAL:
-                switch (true) {
-                    case leftAdjacentRight:
-                        merged = this.combineRight(other.items)
-                        break
-                    case rightAdjacentRight:
-                        merged = this.combineRight(other.items.reverse())
-                        break
-                    case leftAdjacentLeft:
-                        merged = this.combineLeft(other.items.reverse())
-                        break
-                    case rightAdjacentLeft:
-                        merged = this.combineLeft(other.items)
-                        break
-                } break
-            case Direction.RIGHT:
-                switch (true) {
-                    case leftAdjacentRight:
-                        merged = this.combineRight(other.items)
-                        break
-                    case rightAdjacentRight:
-                        merged = this.combineRight(other.items.reverse())
-                        break
-                } break
-            case Direction.LEFT:
-                switch (true) {
-                    case leftAdjacentLeft:
-                        merged = this.combineLeft(other.items.reverse())
-                        break
-                    case rightAdjacentLeft:
-                        merged = this.combineLeft(other.items)
-                        break
-                } break
-            case Direction.UNKNOWN:
-                switch (true) {
-                    case leftAdjacentLeft:
-                    case rightAdjacentLeft:
-                        merged = this.combineRight(other.items)
-                        break
-                    case leftAdjacentRight:
-                    case rightAdjacentRight:
-                        merged = this.combineRight(other.items.reverse())
-                        break
-                }
-                this._direction = Direction.RIGHT
+        let valid = !other.empty()
+        const copy = [...this.items]
+        for (const item of other.items) {
+            if (!(valid = this.add(item))) {
+                this.items = copy
                 break
+            }
         }
-        return merged
+        return valid
     }
 
     left(): T | undefined {
@@ -172,29 +83,28 @@ export class AdjacentList<T extends Comparable<T>> implements Iterable<T> {
         return this.items.at(-1)
     }
 
-    direction(): Direction {
-        return this._direction
+    isBidirectional(): boolean {
+        return this.bidirectional
     }
 
     toString(): string {
-        switch (this._direction) {
-            case Direction.BIDIRECTIONAL:
-                return `[${this.left()} <-> ${this.right()}]`
-            case Direction.RIGHT:
-                return `[${this.left()} -> ${this.right()}]`
-            case Direction.LEFT:
-                return `[${this.right()} -> ${this.left()}]`
-            case Direction.UNKNOWN:
-                return "[]"
+        if (this.empty()) {
+            return "[]"
+        } else if (this.size() === 1) {
+            return `[${this.right()}]`
+        } else if (this.bidirectional) {
+            return `[${this.left()} <-> ${this.right()}]`
+        } else {
+            return `[${this.left()} -> ${this.right()}]`
         }
     }
 
     protected adjacentLeft(item: T): boolean {
-        return Boolean(lift(this.left(), l => l.compareTo(item) > 0 && l.adjacentTo(item)))
+        return Boolean(lift(this.left(), left => left.compareTo(item) === 1))
     }
 
     protected adjacentRight(item: T): boolean {
-        return Boolean(lift(this.right(), r => r.compareTo(item) < 0 && r.adjacentTo(item)))
+        return Boolean(lift(this.right(), right => right.compareTo(item) === -1))
     }
 
     protected addLeft(item: T): boolean {
@@ -206,18 +116,6 @@ export class AdjacentList<T extends Comparable<T>> implements Iterable<T> {
     protected addRight(item: T): boolean {
         const prevSize = this.size()
         this.items.push(item)
-        return this.size() > prevSize
-    }
-
-    protected combineLeft(items: T[]): boolean {
-        const prevSize = this.size()
-        this.items = [...items, ...this.items]
-        return this.size() > prevSize
-    }
-
-    protected combineRight(items: T[]): boolean {
-        const prevSize = this.size()
-        this.items = [...this.items, ...items]
         return this.size() > prevSize
     }
 }

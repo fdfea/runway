@@ -1,5 +1,5 @@
 import lodash from 'lodash'
-import { Comparable, AdjacentList, Direction } from './utils'
+import { Comparable, AdjacentList } from './utils'
 
 export enum Suit {
     Clubs = "c",
@@ -465,7 +465,7 @@ export class SuitedConsecutiveCardSet extends HasCards implements SortedCardPile
 
     clear(): boolean {
         const wasEmpty = this.empty()
-        this.cards = new AdjacentList<Card>(undefined, this.cards.direction() === Direction.BIDIRECTIONAL)
+        this.cards = new AdjacentList<Card>(undefined, this.cards.isBidirectional())
         return !wasEmpty
     }
 
