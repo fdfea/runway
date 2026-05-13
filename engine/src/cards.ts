@@ -470,11 +470,11 @@ export class SuitedConsecutiveCardSet extends HasCards implements SortedCardPile
     }
 
     front(): Card | undefined {
-        return this.cards.front()
+        return this.cards.left()
     }
 
     back(): Card | undefined {
-        return this.cards.back()
+        return this.cards.right()
     }
 
     override toString(): string {
