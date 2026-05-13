@@ -1,3 +1,5 @@
+import { eq } from "lodash"
+
 export function lift<T, R>(value: T | undefined, fn: (x: T) => R): R | undefined {
     return value === undefined ? undefined : fn(value)
 }
@@ -25,12 +27,24 @@ export interface Comparable<T> {
     compareTo(t: T): number
 }
 
+export class Comparables {
+    private constructor() {
+    }
+
+    static adjacent<C extends Comparable<C>>(c1: C, c2: C): boolean {
+        const compared = c1.compareTo(c2)
+        return compared === -1 || compared === 1
+    }
+}
+
 export class AdjacentList<T extends Comparable<T>> implements Iterable<T> {
     protected items: T[]
+    protected includes: Set<T>
     protected bidirectional: boolean
 
     constructor(item?: T, birdectional: boolean = true) {
         this.items = item ? [item] : []
+        this.includes = new Set(this.items)
         this.bidirectional = birdectional
     }
 
@@ -47,28 +61,40 @@ export class AdjacentList<T extends Comparable<T>> implements Iterable<T> {
     }
 
     contains(item: T): boolean {
-        return Boolean(lift(this.left(), left => left.compareTo(item) <= 0))
-            && Boolean(lift(this.right(), right => right.compareTo(item) >= 0))
+        return this.includes.has(item)
     }
 
     add(item: T): boolean {
-        if (this.contains(item)) {
-            return false
-        } else if (this.empty() || this.adjacentRight(item)) {
-            return this.addRight(item)
-        } else if (this.bidirectional && this.adjacentLeft(item)) {
-            return this.addLeft(item)
-        } else {
-            return false
+        let added = false
+        switch (true) {
+            case (this.empty() || this.adjacentRight(item)) && (added = this.addRight(item)): break
+            case this.bidirectional && this.adjacentLeft(item) && (added = this.addLeft(item)): break
         }
+        return added
     }
 
+    /*
+        [3, 4, 5] -> [6, 7, 8] -> force left: no, reverse: no
+        [3, 4, 5] -> [8, 7, 6] -> force left: no, reverse: yes
+        [5, 4, 3] -> [6, 7, 8] -> force left: yes, reverse: no
+        [5, 4, 3] -> [8, 7, 6] -> force left: yes, reverse: yes
+        [3, 4, 5] -> [K, A, 2] -> force left: yes, reverse: yes
+        [3, 4, 5] -> [2, A, K] -> force left: yes, reverse: no
+        [5, 4, 3] -> [K, A, 2] -> force left: no, reverse: yes
+        [5, 4, 3] -> [2, A, K] -> force left: no, reverse: no
+        reverse if: (!RaL && RaR) || (LaR) || (LaR) || (RaR)
+        forward if: RaL || (LaL && !RaR)
+    */
     merge(other: AdjacentList<T>): boolean {
         let valid = !other.empty()
         const copy = [...this.items]
-        for (const item of other.items) {
+        const forward = Boolean(lift(other.left(), left => this.adjacentRight(left)))
+            || Boolean(lift(other.left(), left => this.adjacentLeft(left)))
+            && !Boolean(lift(other.right(), right => this.adjacentRight(right)))
+        for (const item of forward ? other.items : other.items.reverse()) {
             if (!(valid = this.add(item))) {
                 this.items = copy
+                this.includes = new Set(this.items)
                 break
             }
         }
@@ -100,22 +126,24 @@ export class AdjacentList<T extends Comparable<T>> implements Iterable<T> {
     }
 
     protected adjacentLeft(item: T): boolean {
-        return Boolean(lift(this.left(), left => left.compareTo(item) === 1))
+        return Boolean(lift(this.left(), left => Comparables.adjacent(left, item)))
     }
 
     protected adjacentRight(item: T): boolean {
-        return Boolean(lift(this.right(), right => right.compareTo(item) === -1))
+        return Boolean(lift(this.right(), right => Comparables.adjacent(right, item)))
     }
 
     protected addLeft(item: T): boolean {
-        const prevSize = this.size()
+        if (this.contains(item)) return false
         this.items.unshift(item)
-        return this.size() > prevSize
+        this.includes.add(item)
+        return true
     }
 
     protected addRight(item: T): boolean {
-        const prevSize = this.size()
+        if (this.contains(item)) return false
         this.items.push(item)
-        return this.size() > prevSize
+        this.includes.add(item)
+        return true
     }
 }

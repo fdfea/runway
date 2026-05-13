@@ -111,8 +111,10 @@ export class Ranks {
 
     static compare(r1: Rank, r2: Rank): number {
         const allArray = [...this.All]
-        if ((r1 === Rank.Ace && r2 === Rank.Two) || (r1 === Rank.Two && r2 === Rank.Ace)) {
-            return allArray.indexOf(r2) - allArray.indexOf(r1)
+        if (r1 === Rank.Ace && r2 === Rank.Two) {
+            return -1 
+        } else if (r1 === Rank.Two && r2 === Rank.Ace) {
+            return 1
         } else {
             return allArray.indexOf(r1) - allArray.indexOf(r2)
         }
@@ -142,20 +144,8 @@ export class Card implements Comparable<Card> {
         return this.sameSuit(card) && this.consecutive(card)
     }
 
-    suitedConsecutiveAscending(card: Card): boolean {
-        return this.sameSuit(card) && Ranks.consecutiveAscending(this.rank, card.rank)
-    }
-
-    suitedConsecutiveDescending(card: Card): boolean {
-        return this.sameSuit(card) && Ranks.consecutiveDescending(this.rank, card.rank)
-    }
-
     compareTo(card: Card): number {
         return Cards.compare(this, card)
-    }
-
-    adjacentTo(card: Card): boolean {
-        return this.consecutive(card)
     }
 
     toString(): string {

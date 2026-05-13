@@ -54,15 +54,6 @@ test("Cards", () => {
     expect(Cards._Ah.suitedConsecutive(Cards._2h)).toBeTrue()
     expect(Cards._2c.suitedConsecutive(Cards._3d)).toBeFalse()
     expect(Cards._Ah.suitedConsecutive(Cards._Ah)).toBeFalse()
-
-    expect(Cards._2c.suitedConsecutiveAscending(Cards._3c)).toBeTrue()
-    expect(Cards._2c.suitedConsecutiveDescending(Cards._3c)).toBeFalse()
-    expect(Cards._2h.suitedConsecutiveAscending(Cards._Ah)).toBeFalse()
-    expect(Cards._2h.suitedConsecutiveDescending(Cards._Ah)).toBeTrue()
-    expect(Cards._2c.suitedConsecutiveAscending(Cards._3d)).toBeFalse()
-    expect(Cards._2c.suitedConsecutiveDescending(Cards._3d)).toBeFalse()
-    expect(Cards._Ah.suitedConsecutiveAscending(Cards._Ah)).toBeFalse()
-    expect(Cards._Ah.suitedConsecutiveDescending(Cards._Ah)).toBeFalse()
 })
 
 test("Standard Deck", () => {
@@ -121,10 +112,12 @@ test("SuitedConsecutiveCardSet", () => {
     expect(cards2.add(Cards._4h)).toBeTrue()
     expect(cards2.add(Cards._7h)).toBeFalse()
     expect(cards2.size()).toBe(2)
-    expect(cards2.front()).toBe(Cards._4h)
-    expect(cards2.back()).toBe(Cards._5h)
+    expect(cards2.front()).toBe(Cards._5h)
+    expect(cards2.back()).toBe(Cards._4h)
 
     expect(cards1.merge(cards2)).toBeTrue()
+    expect(cards1.size()).toBe(6)
+    expect(cards1.merge(cards2)).toBeFalse()
     expect(cards1.size()).toBe(6)
     expect(cards1.front()).toBe(Cards._Kh)
     expect(cards1.back()).toBe(Cards._5h)
@@ -143,10 +136,12 @@ test("SuitedConsecutiveCardSet", () => {
     expect(cards4.add(Cards._Th)).toBeTrue()
     expect(cards4.add(Cards._Jh)).toBeTrue()
     expect(cards4.add(Cards._Qh)).toBeTrue()
+    expect(cards4.add(Cards._Kh)).toBeFalse()
     expect(cards4.front()).toBe(Cards._6h)
     expect(cards4.back()).toBe(Cards._Qh)
 
     expect(cards3.merge(cards4)).toBeTrue()
     expect(cards3.front()).toBe(Cards._Kh)
     expect(cards3.back()).toBe(Cards._Qh)
+    expect(cards3.size()).toBe(13)
 })
