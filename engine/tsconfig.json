@@ -4,16 +4,13 @@
         "target": "esnext",
         "module": "esnext",
         "moduleResolution": "bundler",
+        "outDir": "dist/",
+        "rootDir": "src/",
         "isolatedModules": true,
         "esModuleInterop": true,
         "declaration": true,
-        "outDir": "dist/",
-        "rootDir": "src/",
         "strict": true
     },
-    "include": ["src/**/*", "test/**/*"],
-    "exclude": ["node_modules", "dist"],
-    "references": [
-        { "path": "./tsconfig.test.json" }
-    ]
+    "include": ["src/**/*"],
+    "exclude": ["node_modules", "test", "dist"]
 }

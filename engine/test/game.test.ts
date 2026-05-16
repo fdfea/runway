@@ -4,7 +4,7 @@ import { FoundationPile, Game, TableauPile } from '../src/game'
 
 test("FoundationPile", () => {
     const cards = new FoundationPile(Cards._Ad)
-    Cards.All.values()
+    Array.from(Cards.All)
         .filter(card => card.suit === Suit.Diamonds)
         .forEach(card => (cards.add(card)))
     expect(cards.complete()).toBeTrue()
