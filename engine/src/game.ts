@@ -47,7 +47,7 @@ export class TableauPile extends SuitedConsecutiveCardSet {
     }
 
     override toString(): string {
-        return `[${this.hidden}, ${super.toString()}]`
+        return `[${this.hiddenRemaining()}, ${super.toString()}]`
     }
 }
 

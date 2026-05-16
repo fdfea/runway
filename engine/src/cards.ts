@@ -31,7 +31,7 @@ export class Suits {
 
     static compare(r1: Suit, r2: Suit): number {
         const allArray = [...this.All]
-        return allArray.indexOf(r1) - allArray.indexOf(r2)
+        return (allArray.indexOf(r1) - allArray.indexOf(r2)) << 1
     }
 }
 

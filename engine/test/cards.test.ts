@@ -1,5 +1,5 @@
 import 'jest-extended'
-import { Cards, Decks, Rank, Ranks, Suit, SuitedConsecutiveCardSet, Suits, UnorderedCardSet } from '../src/cards'
+import { Card, Cards, Decks, Rank, Ranks, Suit, SuitedConsecutiveCardSet, Suits, UnorderedCardSet } from '../src/cards'
 
 test("Suits", () => {
     expect(Suits.All.size).toBe(4)
@@ -98,6 +98,7 @@ test("UnorderedCardSet", () => {
 test("SuitedConsecutiveCardSet", () => {
     const cards1 = new SuitedConsecutiveCardSet(Cards._Ah)
     expect(cards1.size()).toBe(1)
+    expect(cards1.add(Cards._2d)).toBeFalse()
     expect(cards1.add(Cards._2h)).toBeTrue()
     expect(cards1.add(Cards._2h)).toBeFalse()
     expect(cards1.add(Cards._3h)).toBeTrue()

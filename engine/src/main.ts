@@ -32,7 +32,9 @@ while (!game.finished()) {
         let move : Move | undefined
         do {
             const moveStr: string = Readline.question("Enter move: ")
-            move = readMove(moveStr)
+            if (!(move = readMove(moveStr))) {
+                console.log("Error parsing move")
+            }
         } while (!move)
 
         try {
