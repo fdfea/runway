@@ -73,22 +73,11 @@ export class AdjacentList<T extends Comparable<T>> implements Iterable<T> {
         return added
     }
 
-    /*
-        [3, 4, 5] -> [6, 7, 8] -> force left: no, reverse: no
-        [3, 4, 5] -> [8, 7, 6] -> force left: no, reverse: yes
-        [5, 4, 3] -> [6, 7, 8] -> force left: yes, reverse: no
-        [5, 4, 3] -> [8, 7, 6] -> force left: yes, reverse: yes
-        [3, 4, 5] -> [K, A, 2] -> force left: yes, reverse: yes
-        [3, 4, 5] -> [2, A, K] -> force left: yes, reverse: no
-        [5, 4, 3] -> [K, A, 2] -> force left: no, reverse: yes
-        [5, 4, 3] -> [2, A, K] -> force left: no, reverse: no
-        reverse if: (!RaL && RaR) || (LaR) || (LaR) || (RaR)
-        forward if: RaL || (LaL && !RaR)
-    */
     merge(other: AdjacentList<T>): boolean {
         let valid = !other.empty()
         const copy = [...this.items]
-        const forward = Boolean(lift(other.left(), left => this.adjacentRight(left)))
+        const forward = this.empty()
+            || Boolean(lift(other.left(), left => this.adjacentRight(left)))
             || Boolean(lift(other.left(), left => this.adjacentLeft(left)))
             && !Boolean(lift(other.right(), right => this.adjacentRight(right)))
         for (const item of forward ? other.items : other.items.reverse()) {

@@ -128,6 +128,8 @@ test("SuitedConsecutiveCardSet", () => {
     expect(cards1.size()).toBe(6)
     expect(cards3.merge(cards1)).toBeTrue()
     expect(cards3.size()).toBe(6)
+    expect(cards3.front()).toBe(Cards._Kh)
+    expect(cards3.back()).toBe(Cards._5h)
 
     const cards4 = new SuitedConsecutiveCardSet(Cards._6h)
     expect(cards4.add(Cards._7h)).toBeTrue()
@@ -136,11 +138,11 @@ test("SuitedConsecutiveCardSet", () => {
     expect(cards4.add(Cards._Th)).toBeTrue()
     expect(cards4.add(Cards._Jh)).toBeTrue()
     expect(cards4.add(Cards._Qh)).toBeTrue()
-    expect(cards4.add(Cards._Kh)).toBeFalse()
     expect(cards4.front()).toBe(Cards._6h)
     expect(cards4.back()).toBe(Cards._Qh)
 
     expect(cards3.merge(cards4)).toBeTrue()
+    expect(cards3.add(Cards._Kh)).toBeFalse()
     expect(cards3.front()).toBe(Cards._Kh)
     expect(cards3.back()).toBe(Cards._Qh)
     expect(cards3.size()).toBe(13)
