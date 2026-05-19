@@ -80,7 +80,7 @@ export class AdjacentList<T extends Comparable<T>> implements Iterable<T> {
             || Boolean(lift(other.left(), left => this.adjacentRight(left)))
             || Boolean(lift(other.left(), left => this.adjacentLeft(left)))
             && !Boolean(lift(other.right(), right => this.adjacentRight(right)))
-        for (const item of forward ? other.items : other.items.reverse()) {
+        for (const item of forward ? other.items : other.items.toReversed()) {
             if (!(valid = this.add(item))) {
                 this.items = copy
                 this.includes = new Set(this.items)
