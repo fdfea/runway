@@ -31,11 +31,7 @@ export class TableauPile extends SuitedConsecutiveCardSet {
     }
 
     reveal(): boolean {
-        if (this.empty() && lift(this.hidden.draw(), card => this.add(card))) {
-            return true
-        } else {
-            return false
-        }
+        return this.empty() && Boolean(lift(this.hidden.draw(), card => this.add(card)))
     }
 
     hiddenRemaining(): number {

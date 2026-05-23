@@ -446,11 +446,7 @@ export class SuitedConsecutiveCardSet extends HasCards implements SortedCardPile
     }
 
     merge(cards: HasCards): boolean {
-        if (cards instanceof SuitedConsecutiveCardSet) {
-            return this.cards.merge(cards.cards)
-        } else {
-            return false
-        }
+        return cards instanceof SuitedConsecutiveCardSet && this.cards.merge(cards.cards)
     }
 
     clear(): boolean {
