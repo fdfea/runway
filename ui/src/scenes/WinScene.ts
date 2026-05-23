@@ -42,7 +42,7 @@ export class WinScene extends Phaser.Scene {
 
     // Congratulations header — starts small, pops in
     const congrats = this.add.text(panelX, panelY - 90, '🎉 Congratulations! 🎉', {
-      fontFamily: 'Arial Black, Arial',
+      fontFamily: 'Inter, Arial',
       fontSize: '28px',
       color: '#4fc3f7',
       fontStyle: 'bold',
@@ -65,7 +65,7 @@ export class WinScene extends Phaser.Scene {
 
     // Score label
     const scoreLbl = this.add.text(panelX, panelY - 10, 'FINAL SCORE', {
-      fontFamily: 'Arial',
+      fontFamily: 'Inter, Arial',
       fontSize: '14px',
       color: '#7ab8d9',
       letterSpacing: 3,
@@ -75,7 +75,7 @@ export class WinScene extends Phaser.Scene {
 
     // Score value — big and prominent
     const scoreVal = this.add.text(panelX, panelY + 42, score.toString(), {
-      fontFamily: 'Arial Black, Arial',
+      fontFamily: 'Inter, Arial',
       fontSize: '60px',
       color: '#ffffff',
       fontStyle: 'bold',
@@ -93,7 +93,7 @@ export class WinScene extends Phaser.Scene {
 
     // Lower score = better reminder
     const hint = this.add.text(panelX, panelY + 95, score === 0 ? 'Perfect score!' : 'Lower is better', {
-      fontFamily: 'Arial',
+      fontFamily: 'Inter, Arial',
       fontSize: '13px',
       color: score === 0 ? '#69f0ae' : '#7ab8d9',
     }).setOrigin(0.5, 0.5).setDepth(2).setAlpha(0)
@@ -113,7 +113,7 @@ export class WinScene extends Phaser.Scene {
     btn.setInteractive({ useHandCursor: true })
 
     const btnText = this.add.text(btnX, btnY, 'Play Again', {
-      fontFamily: 'Arial Black, Arial',
+      fontFamily: 'Inter, Arial',
       fontSize: '18px',
       color: '#e8f4fd',
     }).setOrigin(0.5, 0.5).setDepth(3).setAlpha(0)

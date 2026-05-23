@@ -34,7 +34,7 @@ export class BootScene extends Phaser.Scene {
 
     const loadingText = this.add
       .text(width / 2, barY - 30, 'Loading...', {
-        fontFamily: 'Arial',
+        fontFamily: 'Inter, Arial',
         fontSize: '18px',
         color: '#b0c4de',
       })
@@ -62,6 +62,10 @@ export class BootScene extends Phaser.Scene {
   }
 
   create() {
-    this.scene.start('GameScene')
+    // Wait for web fonts to be ready before starting the game scene to
+    // prevent a flash of unstyled/blurry text on first render.
+    document.fonts.ready.then(() => {
+      this.scene.start('GameScene')
+    })
   }
 }

@@ -130,20 +130,20 @@ export class GameScene extends Phaser.Scene {
     accent.setDepth(DEPTH_BANNER)
 
     // Hamburger menu (non-functional placeholder)
-    const hamStyle = { fontFamily: 'Arial', fontSize: '26px', color: '#b0c4de' }
+    const hamStyle = { fontFamily: 'Inter, Arial', fontSize: '26px', color: '#b0c4de' }
     const ham = this.add.text(28, BANNER_H / 2, '≡', hamStyle).setOrigin(0.5, 0.5)
     ham.setDepth(DEPTH_UI)
     ham.setInteractive({ useHandCursor: true })
 
     // Game title
-    const titleStyle = { fontFamily: 'Arial Black, Arial', fontSize: '22px', color: '#e8f4fd', fontStyle: 'bold' }
+    const titleStyle = { fontFamily: 'Inter, Arial', fontSize: '22px', color: '#e8f4fd', fontStyle: 'bold' }
     this.add.text(CANVAS_W / 2, BANNER_H / 2, 'CARD GAME', titleStyle).setOrigin(0.5, 0.5).setDepth(DEPTH_UI)
 
     // Score label
-    const scoreLabelStyle = { fontFamily: 'Arial', fontSize: '15px', color: '#7ab8d9' }
+    const scoreLabelStyle = { fontFamily: 'Inter, Arial', fontSize: '15px', color: '#7ab8d9' }
     this.add.text(CANVAS_W - 200, BANNER_H / 2, 'SCORE', scoreLabelStyle).setOrigin(0.5, 0.5).setDepth(DEPTH_UI)
 
-    const scoreStyle = { fontFamily: 'Arial Black, Arial', fontSize: '22px', color: '#4fc3f7', fontStyle: 'bold' }
+    const scoreStyle = { fontFamily: 'Inter, Arial', fontSize: '22px', color: '#4fc3f7', fontStyle: 'bold' }
     this.scoreText = this.add.text(CANVAS_W - 145, BANNER_H / 2, '0', scoreStyle).setOrigin(0, 0.5)
     this.scoreText.setDepth(DEPTH_UI)
 
@@ -154,7 +154,7 @@ export class GameScene extends Phaser.Scene {
     restartBg.setStrokeStyle(1.5, 0x4fc3f7)
 
     const restartText = this.add.text(CANVAS_W - 52, BANNER_H / 2, '↺ Restart', {
-      fontFamily: 'Arial',
+      fontFamily: 'Inter, Arial',
       fontSize: '14px',
       color: '#b0d8f5',
     }).setOrigin(0.5, 0.5).setDepth(DEPTH_UI)
@@ -438,7 +438,10 @@ export class GameScene extends Phaser.Scene {
         const originY = runSprites.map(s => s.y)
         const originDepth = runSprites.map(s => s.depth)
 
-        runSprites.forEach((s, idx) => s.setDepth(DEPTH_DRAGGING + idx))
+        runSprites.forEach((s, idx) => {
+          s.setDepth(DEPTH_DRAGGING + idx)
+          this.children.bringToTop(s)
+        })
 
         this.drag = {
           cards: runSprites,
@@ -476,8 +479,10 @@ export class GameScene extends Phaser.Scene {
 
       const offsetX = pointer.x - topSprite.x
       const offsetY = pointer.y - topSprite.y
+      const originDepth = topSprite.depth
 
       topSprite.setDepth(DEPTH_DRAGGING)
+      this.children.bringToTop(topSprite)
 
       this.drag = {
         cards: [topSprite],
@@ -488,7 +493,7 @@ export class GameScene extends Phaser.Scene {
         offsetY: [offsetY],
         originX: [topSprite.x],
         originY: [topSprite.y],
-        originDepth: [topSprite.depth],
+        originDepth: [originDepth],
       }
     })
   }
@@ -578,7 +583,10 @@ export class GameScene extends Phaser.Scene {
         if (this.animating) return
         const offsetX = pointer.x - sprite.x
         const offsetY = pointer.y - sprite.y
+        const originDepth = sprite.depth
+
         sprite.setDepth(DEPTH_DRAGGING)
+        this.children.bringToTop(sprite)
 
         this.drag = {
           cards: [sprite],
@@ -589,7 +597,7 @@ export class GameScene extends Phaser.Scene {
           offsetY: [offsetY],
           originX: [sprite.x],
           originY: [sprite.y],
-          originDepth: [sprite.depth],
+          originDepth: [originDepth],
         }
       })
     })
