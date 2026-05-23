@@ -1,0 +1,20 @@
+{
+  "name": "ui",
+  "version": "0.1.0",
+  "description": "Browser-based card game UI using Phaser.js and Vite",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "engine": "file:../engine",
+    "phaser": "^3.88.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.9.3",
+    "vite": "^6.3.5"
+  }
+}

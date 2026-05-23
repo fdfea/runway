@@ -2,7 +2,14 @@
   "name": "engine",
   "version": "0.1.0",
   "description": "Backend card library and rules implementation for Game.",
-  "main": "main.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
   "author": "Forrest Feaser",
   "dependencies": {
     "lodash": "^4.17.23",
