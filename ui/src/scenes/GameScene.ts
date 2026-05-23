@@ -129,21 +129,40 @@ export class GameScene extends Phaser.Scene {
     const accent = this.add.rectangle(CANVAS_W / 2, BANNER_H, CANVAS_W, 2, 0x1e6fa8)
     accent.setDepth(DEPTH_BANNER)
 
-    // Hamburger menu (non-functional placeholder)
-    const hamStyle = { fontFamily: 'Inter, Arial', fontSize: '26px', color: '#b0c4de' }
-    const ham = this.add.text(28, BANNER_H / 2, '≡', hamStyle).setOrigin(0.5, 0.5)
-    ham.setDepth(DEPTH_UI)
-    ham.setInteractive({ useHandCursor: true })
+    // Rules button
+    const rulesBg = this.add.rectangle(50, BANNER_H / 2, 76, 36, 0x1a3e6e, 1)
+    rulesBg.setDepth(DEPTH_UI)
+    rulesBg.setInteractive({ useHandCursor: true })
+    rulesBg.setStrokeStyle(1.5, 0x4fc3f7)
+
+    const rulesText = this.add.text(50, BANNER_H / 2, 'Rules', {
+      fontFamily: 'Inter, Arial',
+      fontSize: '14px',
+      color: '#b0d8f5',
+      resolution: window.devicePixelRatio || 1,
+    }).setOrigin(0.5, 0.5).setDepth(DEPTH_UI)
+
+    rulesBg.on('pointerover', () => { rulesBg.setFillStyle(0x1e5fa8) })
+    rulesBg.on('pointerout', () => { rulesBg.setFillStyle(0x1a3e6e) })
+    rulesBg.on('pointerdown', () => {
+      if (!this.scene.isActive('RulesScene')) {
+        this.scene.launch('RulesScene')
+      }
+    })
+
+    // Keep rulesText reference alive (avoids unused-variable lint warning)
+    void rulesText
 
     // Game title
-    const titleStyle = { fontFamily: 'Inter, Arial', fontSize: '22px', color: '#e8f4fd', fontStyle: 'bold' }
+    const dpr = window.devicePixelRatio || 1
+    const titleStyle = { fontFamily: 'Inter, Arial', fontSize: '22px', color: '#e8f4fd', fontStyle: 'bold', resolution: dpr }
     this.add.text(CANVAS_W / 2, BANNER_H / 2, 'CARD GAME', titleStyle).setOrigin(0.5, 0.5).setDepth(DEPTH_UI)
 
     // Score label
-    const scoreLabelStyle = { fontFamily: 'Inter, Arial', fontSize: '15px', color: '#7ab8d9' }
+    const scoreLabelStyle = { fontFamily: 'Inter, Arial', fontSize: '15px', color: '#7ab8d9', resolution: dpr }
     this.add.text(CANVAS_W - 200, BANNER_H / 2, 'SCORE', scoreLabelStyle).setOrigin(0.5, 0.5).setDepth(DEPTH_UI)
 
-    const scoreStyle = { fontFamily: 'Inter, Arial', fontSize: '22px', color: '#4fc3f7', fontStyle: 'bold' }
+    const scoreStyle = { fontFamily: 'Inter, Arial', fontSize: '22px', color: '#4fc3f7', fontStyle: 'bold', resolution: dpr }
     this.scoreText = this.add.text(CANVAS_W - 145, BANNER_H / 2, '0', scoreStyle).setOrigin(0, 0.5)
     this.scoreText.setDepth(DEPTH_UI)
 
@@ -157,6 +176,7 @@ export class GameScene extends Phaser.Scene {
       fontFamily: 'Inter, Arial',
       fontSize: '14px',
       color: '#b0d8f5',
+      resolution: window.devicePixelRatio || 1,
     }).setOrigin(0.5, 0.5).setDepth(DEPTH_UI)
 
     restartBg.on('pointerover', () => { restartBg.setFillStyle(0x1e5fa8) })

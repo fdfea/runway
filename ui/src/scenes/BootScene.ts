@@ -37,6 +37,7 @@ export class BootScene extends Phaser.Scene {
         fontFamily: 'Inter, Arial',
         fontSize: '18px',
         color: '#b0c4de',
+        resolution: window.devicePixelRatio || 1,
       })
       .setOrigin(0.5, 0.5)
       .setDepth(2)

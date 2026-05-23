@@ -2,6 +2,7 @@ import Phaser from 'phaser'
 import { BootScene } from './scenes/BootScene'
 import { GameScene } from './scenes/GameScene'
 import { WinScene } from './scenes/WinScene'
+import { RulesScene } from './scenes/RulesScene'
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -9,7 +10,7 @@ const config: Phaser.Types.Core.GameConfig = {
   height: 720,
   backgroundColor: '#000000',
   parent: document.body,
-  scene: [BootScene, GameScene, WinScene],
+  scene: [BootScene, GameScene, WinScene, RulesScene],
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
@@ -17,7 +18,6 @@ const config: Phaser.Types.Core.GameConfig = {
   render: {
     antialias: true,
     pixelArt: false,
-    resolution: window.devicePixelRatio,
   },
 }
 

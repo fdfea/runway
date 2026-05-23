@@ -2,6 +2,8 @@ import Phaser from 'phaser'
 
 const CANVAS_W = 1280
 const CANVAS_H = 720
+const FONT = 'Inter, Arial'
+const DPR  = window.devicePixelRatio || 1
 
 export class WinScene extends Phaser.Scene {
   constructor() {
@@ -42,10 +44,11 @@ export class WinScene extends Phaser.Scene {
 
     // Congratulations header — starts small, pops in
     const congrats = this.add.text(panelX, panelY - 90, '🎉 Congratulations! 🎉', {
-      fontFamily: 'Inter, Arial',
+      fontFamily: FONT,
       fontSize: '28px',
       color: '#4fc3f7',
       fontStyle: 'bold',
+      resolution: DPR,
     }).setOrigin(0.5, 0.5).setDepth(2).setAlpha(0).setScale(0.4)
 
     this.tweens.add({
@@ -65,20 +68,22 @@ export class WinScene extends Phaser.Scene {
 
     // Score label
     const scoreLbl = this.add.text(panelX, panelY - 10, 'FINAL SCORE', {
-      fontFamily: 'Inter, Arial',
+      fontFamily: FONT,
       fontSize: '14px',
       color: '#7ab8d9',
       letterSpacing: 3,
+      resolution: DPR,
     }).setOrigin(0.5, 0.5).setDepth(2).setAlpha(0)
 
     this.tweens.add({ targets: scoreLbl, alpha: 1, duration: 300, delay: 600 })
 
     // Score value — big and prominent
     const scoreVal = this.add.text(panelX, panelY + 42, score.toString(), {
-      fontFamily: 'Inter, Arial',
+      fontFamily: FONT,
       fontSize: '60px',
       color: '#ffffff',
       fontStyle: 'bold',
+      resolution: DPR,
     }).setOrigin(0.5, 0.5).setDepth(2).setAlpha(0).setScale(0.6)
 
     this.tweens.add({
@@ -93,9 +98,10 @@ export class WinScene extends Phaser.Scene {
 
     // Lower score = better reminder
     const hint = this.add.text(panelX, panelY + 95, score === 0 ? 'Perfect score!' : 'Lower is better', {
-      fontFamily: 'Inter, Arial',
+      fontFamily: FONT,
       fontSize: '13px',
       color: score === 0 ? '#69f0ae' : '#7ab8d9',
+      resolution: DPR,
     }).setOrigin(0.5, 0.5).setDepth(2).setAlpha(0)
 
     this.tweens.add({ targets: hint, alpha: 0.8, duration: 300, delay: 900 })
@@ -113,9 +119,10 @@ export class WinScene extends Phaser.Scene {
     btn.setInteractive({ useHandCursor: true })
 
     const btnText = this.add.text(btnX, btnY, 'Play Again', {
-      fontFamily: 'Inter, Arial',
+      fontFamily: FONT,
       fontSize: '18px',
       color: '#e8f4fd',
+      resolution: DPR,
     }).setOrigin(0.5, 0.5).setDepth(3).setAlpha(0)
 
     this.tweens.add({ targets: [btn, btnText], alpha: 1, duration: 300, delay: 1000 })
