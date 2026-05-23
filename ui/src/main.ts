@@ -17,6 +17,7 @@ const config: Phaser.Types.Core.GameConfig = {
   render: {
     antialias: true,
     pixelArt: false,
+    resolution: window.devicePixelRatio,
   },
 }
 

@@ -32,17 +32,20 @@ const STOCK_X = 80
 const STOCK_Y = CANVAS_H - 100
 const STOCK_OFFSET = 3                 // very tight fan
 
-// Score pile: bottom-right — cards fan horizontally left from the right anchor
-// With 13 cards at SCORE_HORIZ_OFFSET each, fan spans 12*SCORE_HORIZ_OFFSET = 732px left of anchor.
-const SCORE_HORIZ_OFFSET = 61         // px per card in horizontal fan (10px overlap = fully readable)
-const SCORE_ANCHOR_X = CANVAS_W - 80  // rightmost card center
+// Score pile: bottom row — cards fan horizontally left-to-right.
+// Cards start near the stock pile and expand right, compressing dynamically as the pile grows.
+// SCORE_LEFT_X is chosen so the gap between the stock pile's right edge and the score slot's
+// left edge equals the gap between the score slot's right edge and the canvas right edge (~36.5 px).
+const SCORE_LEFT_X = 196
+const SCORE_RIGHT_X = CANVAS_W - 80  // rightmost card center (stays near right edge)
+const SCORE_MAX_OFFSET = 80          // comfortable per-card offset when pile is small
 const SCORE_Y = CANVAS_H - 100
 
 // Drag depths
 const DEPTH_BACKGROUND = 0
 const DEPTH_PILE_SLOTS = 1
 const DEPTH_CARDS = 2
-const DEPTH_DRAGGING = 50
+const DEPTH_DRAGGING = 500
 const DEPTH_BANNER = 100
 const DEPTH_UI = 101
 
@@ -52,6 +55,7 @@ const DEAL_STAGGER = 60
 const FLIP_DURATION = 180
 const RETURN_DURATION = 280
 const SNAP_DURATION = 240
+const FOUND_STAGGER = 80   // ms between successive cards in a foundation merge
 
 type PileType = 'foundation' | 'tableau' | 'stock' | 'score'
 
@@ -71,6 +75,7 @@ interface DragState {
   offsetY: number[]
   originX: number[]
   originY: number[]
+  originDepth: number[]                   // original depth values for restoring after a failed drop
 }
 
 export class GameScene extends Phaser.Scene {
@@ -190,11 +195,10 @@ export class GameScene extends Phaser.Scene {
     stockSlot.setStrokeStyle(1.5, slotStroke)
     stockSlot.setDepth(DEPTH_PILE_SLOTS)
 
-    // Score slot — full width of the maximum 13-card horizontal fan
-    const scoreSlotW = CARD_WIDTH + 12 * SCORE_HORIZ_OFFSET
+    // Score slot — spans from leftmost to rightmost possible card position
+    const scoreSlotW = (SCORE_RIGHT_X - SCORE_LEFT_X) + CARD_WIDTH + 16
     const scoreSlotH = CARD_HEIGHT + 16
-    // Right edge of slot aligns with right edge of anchor card; left edge covers leftmost possible card
-    const scoreSlotX = SCORE_ANCHOR_X - scoreSlotW / 2 + CARD_WIDTH / 2
+    const scoreSlotX = (SCORE_LEFT_X + SCORE_RIGHT_X) / 2
     const scoreSlot = this.add.rectangle(scoreSlotX, SCORE_Y, scoreSlotW, scoreSlotH, slotColor, slotAlpha)
     scoreSlot.setStrokeStyle(1.5, slotStroke)
     scoreSlot.setDepth(DEPTH_PILE_SLOTS)
@@ -268,26 +272,28 @@ export class GameScene extends Phaser.Scene {
     if (!pile) return
     const tx = tableauX(ti)
 
-    // Hidden cards — lower depth so active cards render above
+    // Hidden cards — lower depth band: DEPTH_CARDS + ti*20 + hi
+    // Using per-pile bands (20 slots each) ensures hidden cards never overlap face-up cards
     const hiddenCount = pile.hiddenRemaining()
     for (let hi = 0; hi < hiddenCount; hi++) {
       const cy = TAB_Y + hi * TAB_HIDDEN_OFFSET
       const sprite = this.add.image(tx, cy, CARD_BACK_KEY)
       sprite.setDisplaySize(CARD_WIDTH, CARD_HEIGHT)
-      sprite.setDepth(DEPTH_CARDS + hi)
+      sprite.setDepth(DEPTH_CARDS + ti * 20 + hi)
       sprite.setData('hidden', true)
       sprite.setData('tableauIndex', ti)
       this.cardSprites.set(`hidden_${ti}_${hi}`, sprite)
     }
 
-    // Active (face-up) cards — higher depth, stacked above hidden
+    // Active (face-up) cards — higher depth band: DEPTH_CARDS + 200 + ti*20 + ci
+    // Starting at +200 guarantees all face-up cards are always above all hidden cards
     const activeCards = [...pile]
     const activeStart = hiddenCount * TAB_HIDDEN_OFFSET
     for (let ci = 0; ci < activeCards.length; ci++) {
       const card = activeCards[ci]
       const cy = TAB_Y + activeStart + ci * TAB_FACE_OFFSET
       const sprite = this.makeCardSprite(card, tx, cy, true)
-      sprite.setDepth(DEPTH_CARDS + hiddenCount + ci)
+      sprite.setDepth(DEPTH_CARDS + 200 + ti * 20 + ci)
       sprite.setData('tableauIndex', ti)
       sprite.setData('activeIndex', ci)
       this.cardSprites.set(card.toString(), sprite)
@@ -316,8 +322,6 @@ export class GameScene extends Phaser.Scene {
           if (this.animating) return
           this.doRevealFromTableau(ti)
         })
-        topHiddenSprite.on('pointerover', () => topHiddenSprite.setAlpha(0.85))
-        topHiddenSprite.on('pointerout', () => topHiddenSprite.setAlpha(1))
       } else {
         // No hidden sprite found — create a transparent click zone over the slot
         const zone = this.add.rectangle(tx, TAB_Y, CARD_WIDTH, CARD_HEIGHT, 0xffffff, 0)
@@ -367,8 +371,8 @@ export class GameScene extends Phaser.Scene {
 
     // Create face-down sprite at position, then flip to face-up
     const sprite = this.makeCardSprite(card, tx, cy, false)
-    // Set depth to sit above all remaining hidden cards (hiddenCount is post-reveal count)
-    sprite.setDepth(DEPTH_CARDS + hiddenCount)
+    // Set depth in the face-up band for this pile (ci=0, the first and only face-up card after reveal)
+    sprite.setDepth(DEPTH_CARDS + 200 + ti * 20 + 0)
     sprite.setData('tableauIndex', ti)
     sprite.setData('activeIndex', 0)
 
@@ -424,7 +428,7 @@ export class GameScene extends Phaser.Scene {
       sprite.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
         if (this.animating) return
         // Build the run from captureIndex to end
-        const runCards = activeCards.slice(captureIndex)
+        const runCards = [...activeCards]  // always drag the entire face-up run
         const runSprites = runCards.map(c => this.cardSprites.get(c.toString())!).filter(Boolean)
         if (runSprites.length === 0) return
 
@@ -432,6 +436,7 @@ export class GameScene extends Phaser.Scene {
         const offsetY = runSprites.map(s => pointer.y - s.y)
         const originX = runSprites.map(s => s.x)
         const originY = runSprites.map(s => s.y)
+        const originDepth = runSprites.map(s => s.depth)
 
         runSprites.forEach((s, idx) => s.setDepth(DEPTH_DRAGGING + idx))
 
@@ -444,6 +449,7 @@ export class GameScene extends Phaser.Scene {
           offsetY,
           originX,
           originY,
+          originDepth,
         }
       })
     }
@@ -482,6 +488,7 @@ export class GameScene extends Phaser.Scene {
         offsetY: [offsetY],
         originX: [topSprite.x],
         originY: [topSprite.y],
+        originDepth: [topSprite.depth],
       }
     })
   }
@@ -527,10 +534,12 @@ export class GameScene extends Phaser.Scene {
   // ─── Score pile render ─────────────────────────────────────────────────────
 
   // Compute horizontal x position for a card in the score pile fan.
-  // Cards fan left from SCORE_ANCHOR_X; most-recent card is at the right (highest X).
+  // Cards fan left-to-right from SCORE_LEFT_X; oldest card is leftmost (ci=0), newest is rightmost.
+  // Offset compresses dynamically so all cards always fit within SCORE_LEFT_X..SCORE_RIGHT_X.
   private scoreCardX(ci: number, count: number): number {
-    // ci=0 is oldest (leftmost), ci=count-1 is newest (rightmost = anchor)
-    return SCORE_ANCHOR_X - (count - 1 - ci) * SCORE_HORIZ_OFFSET
+    if (count <= 1) return SCORE_LEFT_X
+    const offset = Math.min(SCORE_MAX_OFFSET, (SCORE_RIGHT_X - SCORE_LEFT_X) / (count - 1))
+    return SCORE_LEFT_X + ci * offset
   }
 
   private renderScorePile() {
@@ -580,6 +589,7 @@ export class GameScene extends Phaser.Scene {
           offsetY: [offsetY],
           originX: [sprite.x],
           originY: [sprite.y],
+          originDepth: [sprite.depth],
         }
       })
     })
@@ -638,12 +648,19 @@ export class GameScene extends Phaser.Scene {
       const move = this.buildMove(drag, target)
       if (!move) throw new Error('No move available')
       this.cardGame.makeMove(move)
-      // Move succeeded — compute the exact final position from the updated engine state
-      // so the snap animation lands precisely where fullRedraw() will place the card.
-      const actualTarget = this.computeActualTarget(drag, target)
-      this.animateSnap(drag, actualTarget, () => {
-        this.fullRedraw()
-      })
+      // Move succeeded — animate then redraw
+      if (target.type === 'foundation') {
+        // Foundation merges have their own dedicated animation (staggered, direction-aware)
+        this.animateFoundationMerge(drag, target.index, () => {
+          this.fullRedraw()
+        })
+      } else {
+        // For all other targets, snap the dragged sprites to their final positions
+        const actualTarget = this.computeActualTarget(drag, target)
+        this.animateSnap(drag, actualTarget, () => {
+          this.fullRedraw()
+        })
+      }
     } catch (e) {
       // Illegal move — animate cards back
       this.animateReturn(drag)
@@ -656,9 +673,11 @@ export class GameScene extends Phaser.Scene {
   private computeActualTarget(drag: DragState, nominal: PileTarget): PileTarget {
     if (nominal.type === 'foundation') {
       const pile = this.cardGame.getFoundationPile(nominal.index)!
-      const newCount = [...pile].length
-      // The dropped card is now the last card in the pile
-      const x = foundationX(nominal.index) + (newCount - 1) * FOUND_HORIZ_OFFSET
+      const cards = [...pile]
+      const droppedCard = drag.engineCards[0]
+      // Find the actual index of the dropped card — it may have been inserted at the left
+      const droppedIndex = cards.findIndex(c => c.toString() === droppedCard.toString())
+      const x = foundationX(nominal.index) + droppedIndex * FOUND_HORIZ_OFFSET
       return { ...nominal, x, y: FOUND_Y }
     }
 
@@ -707,21 +726,24 @@ export class GameScene extends Phaser.Scene {
   }
 
   private findDropTarget(px: number, py: number, drag: DragState): PileTarget | null {
-    const hw = CARD_WIDTH / 2 + 34
-    const hh = CARD_HEIGHT / 2 + 34
+    const hw = CARD_WIDTH / 2 + 50
+    const hh = CARD_HEIGHT / 2 + 50
 
-    // Check foundation piles
+    // Check foundation piles — hit zone covers the entire fan plus padding on all sides
     for (let i = 0; i < 4; i++) {
       const fx = foundationX(i)
       const pile = this.cardGame.getFoundationPile(i)!
-      const lastX = fx + Math.max(0, [...pile].length - 1) * FOUND_HORIZ_OFFSET
-      // Drop zone extends to cover the fan
-      if (Math.abs(px - lastX) <= hw + 40 && Math.abs(py - FOUND_Y) <= hh) {
+      const cards = [...pile]
+      const lastX = fx + Math.max(0, cards.length - 1) * FOUND_HORIZ_OFFSET
+      // Fan spans from fx (first card) to lastX (last card); add hw padding on each side
+      const fanLeft = fx - CARD_WIDTH / 2 - 20
+      const fanRight = lastX + CARD_WIDTH / 2 + 20
+      if (px >= fanLeft && px <= fanRight && Math.abs(py - FOUND_Y) <= hh) {
         return { type: 'foundation', index: i, x: lastX, y: FOUND_Y }
       }
     }
 
-    // Check tableau piles
+    // Check tableau piles — hit zone covers entire column width + padding, full height + padding
     for (let i = 0; i < 7; i++) {
       const tx = tableauX(i)
       const pile = this.cardGame.getTableauPile(i)!
@@ -736,9 +758,10 @@ export class GameScene extends Phaser.Scene {
         targetY = TAB_Y + (hiddenCount > 0 ? (hiddenCount - 1) * TAB_HIDDEN_OFFSET : 0)
       }
 
-      // Tall hit zone covering the whole pile column
-      const pileH = Math.max(CARD_HEIGHT, activeStart + activeCards.length * TAB_FACE_OFFSET + CARD_HEIGHT / 2)
-      const pileTop = TAB_Y - CARD_HEIGHT / 2
+      // Tall hit zone covering the whole pile column with generous padding
+      const totalCardsH = activeStart + Math.max(0, activeCards.length - 1) * TAB_FACE_OFFSET
+      const pileH = Math.max(CARD_HEIGHT, totalCardsH + CARD_HEIGHT) + 30
+      const pileTop = TAB_Y - CARD_HEIGHT / 2 - 20
       const pileBottom = pileTop + pileH
 
       if (Math.abs(px - tx) <= hw && py >= pileTop && py <= pileBottom) {
@@ -746,12 +769,15 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
-    // Check score pile — wide hit zone covering the full horizontal fan area (up to 13 cards)
-    const scoreFanW = 12 * SCORE_HORIZ_OFFSET + CARD_WIDTH
-    const scoreLeft = SCORE_ANCHOR_X - scoreFanW
-    const scoreRight = SCORE_ANCHOR_X + CARD_WIDTH / 2
+    // Check score pile — wide hit zone covering the full horizontal fan area
+    const scoreLeft = SCORE_LEFT_X - CARD_WIDTH / 2 - 20
+    const scoreRight = SCORE_RIGHT_X + CARD_WIDTH / 2 + 20
     if (px >= scoreLeft && px <= scoreRight && Math.abs(py - SCORE_Y) <= hh + 20) {
-      return { type: 'score', index: 0, x: SCORE_ANCHOR_X, y: SCORE_Y }
+      // Target x is the position where the next card would go
+      const scoreCards = [...this.cardGame.getScorePile()]
+      const nextCount = scoreCards.length + 1
+      const targetX = this.scoreCardX(scoreCards.length, nextCount)
+      return { type: 'score', index: 0, x: targetX, y: SCORE_Y }
     }
 
     return null
@@ -770,7 +796,7 @@ export class GameScene extends Phaser.Scene {
         duration: RETURN_DURATION,
         ease: 'Cubic.easeInOut',
         onComplete: () => {
-          sprite.setDepth(DEPTH_CARDS + drag.engineCards.length - i - 1)
+          sprite.setDepth(drag.originDepth[i])
           completed++
           if (completed === drag.cards.length) {
             this.animating = false
@@ -780,12 +806,110 @@ export class GameScene extends Phaser.Scene {
     })
   }
 
+  // ─── Foundation merge animation ───────────────────────────────────────────
+  //
+  // Four cases, all handled here:
+  //   Right-side (single/multi): incoming cards fly in one-by-one, left→right, staggered.
+  //   Left-side  (single/multi): existing cards slide right simultaneously; incoming cards
+  //                              fly in one-by-one, left→right, staggered.
+
+  private animateFoundationMerge(drag: DragState, fi: number, onDone: () => void) {
+    this.animating = true
+
+    const pile = this.cardGame.getFoundationPile(fi)!
+    const cards = [...pile]
+    const N = drag.cards.length
+    const fBaseX = foundationX(fi)
+
+    // Look up the true post-merge index for each incoming card individually.
+    // This is necessary because the engine may iterate the incoming run in reverse
+    // (when forward=false), meaning drag.engineCards[0] is not necessarily the
+    // leftmost of the inserted cards.
+    const finalIndices = drag.engineCards.map(ec =>
+      cards.findIndex(c => c.toString() === ec.toString())
+    )
+
+    // Left-side insertion: the incoming cards collectively occupy the leftmost slots
+    // and there were already cards in the pile before this merge.
+    const minFinalIndex = Math.min(...finalIndices)
+    const isLeft = minFinalIndex === 0 && N < cards.length
+
+    // Existing sprites that need to slide right (left-side only).
+    // They now live at indices N..cards.length-1 in the post-merge pile.
+    const existingSprites: Phaser.GameObjects.Image[] = []
+    if (isLeft) {
+      for (let ci = N; ci < cards.length; ci++) {
+        const s = this.cardSprites.get(cards[ci].toString())
+        if (s) existingSprites.push(s)
+      }
+    }
+
+    // Full duration of the staggered sequence, so existing sprites finish sliding
+    // at the same moment the last incoming card lands.
+    const totalDuration = (N - 1) * FOUND_STAGGER + SNAP_DURATION
+
+    const totalTweens = N + existingSprites.length
+    let completed = 0
+    const done = () => {
+      completed++
+      if (completed === totalTweens) {
+        this.animating = false
+        onDone()
+      }
+    }
+
+    // Existing sprites drift right continuously over the full animation window (left-side only).
+    // This keeps them in sync with the staggered incoming cards so each new card appears
+    // to slot in as the pile makes room, rather than the pile jumping away first.
+    existingSprites.forEach((sprite, j) => {
+      sprite.setDepth(DEPTH_CARDS + N + j)
+      this.tweens.add({
+        targets: sprite,
+        x: fBaseX + (N + j) * FOUND_HORIZ_OFFSET,
+        duration: totalDuration,
+        ease: 'Sine.easeOut',
+        onComplete: done,
+      })
+    })
+
+    // Sort incoming cards so that the one landing closest to the pile edge goes first:
+    //   right-side → ascending finalIndex (lowest index = adjacent to existing right end)
+    //   left-side  → descending finalIndex (highest index = adjacent to existing left end)
+    const order = drag.cards
+      .map((sprite, i) => ({ sprite, finalIndex: finalIndices[i] }))
+      .sort((a, b) => isLeft ? b.finalIndex - a.finalIndex : a.finalIndex - b.finalIndex)
+
+    order.forEach(({ sprite, finalIndex }, staggerStep) => {
+      sprite.setDepth(DEPTH_CARDS + finalIndex)
+      this.tweens.add({
+        targets: sprite,
+        x: fBaseX + finalIndex * FOUND_HORIZ_OFFSET,
+        y: FOUND_Y,
+        duration: SNAP_DURATION,
+        delay: staggerStep * FOUND_STAGGER,
+        ease: 'Sine.easeOut',
+        onComplete: done,
+      })
+    })
+  }
+
   private animateSnap(drag: DragState, target: PileTarget, onDone: () => void) {
     this.animating = true
     let completed = 0
     drag.cards.forEach((sprite, i) => {
-      const destX = target.x
-      const destY = target.y + i * (drag.sourceType === 'tableau' ? TAB_FACE_OFFSET : 0)
+      // Foundation piles fan horizontally; tableau piles fan vertically.
+      let destX: number
+      let destY: number
+      if (target.type === 'foundation') {
+        destX = target.x + i * FOUND_HORIZ_OFFSET
+        destY = target.y
+      } else if (target.type === 'tableau') {
+        destX = target.x
+        destY = target.y + i * TAB_FACE_OFFSET
+      } else {
+        destX = target.x
+        destY = target.y
+      }
       this.tweens.add({
         targets: sprite,
         x: destX,
@@ -936,36 +1060,76 @@ export class GameScene extends Phaser.Scene {
   // ─── Full redraw after a move ──────────────────────────────────────────────
 
   private fullRedraw() {
-    // Destroy all card sprites
-    for (const [, sprite] of this.cardSprites) {
-      sprite.destroy()
+    // Build the set of card keys currently in foundation piles — these sprites are preserved
+    // so that cards already placed don't visually jump when a new card is inserted.
+    const foundationKeys = new Set<string>()
+    for (let fi = 0; fi < 4; fi++) {
+      for (const card of this.cardGame.getFoundationPile(fi)!) {
+        foundationKeys.add(card.toString())
+      }
     }
-    this.cardSprites.clear()
+
+    // Destroy all non-foundation sprites
+    for (const [key, sprite] of this.cardSprites) {
+      if (!foundationKeys.has(key)) {
+        sprite.destroy()
+      }
+    }
+    // Keep only the foundation sprites in the map; everything else is rebuilt below
+    this.cardSprites = new Map([...this.cardSprites].filter(([k]) => foundationKeys.has(k)))
+
+    // Foundation cards are never draggable — strip any leftover interactivity from sprites
+    // that were previously tableau/score cards and got preserved after a successful move.
+    for (const [, sprite] of this.cardSprites) {
+      sprite.disableInteractive()
+      sprite.removeAllListeners()
+    }
 
     // Re-render everything from engine state
     this.rebuildFromEngineState()
     this.setupAllInteractions()
     this.updateScoreDisplay()
 
-    // Check for win
+    // Check for win — launch WinScene as an overlay on top of GameScene
     if (this.cardGame.finished()) {
       this.time.delayedCall(400, () => {
-        this.scene.start('WinScene', { score: this.cardGame.getScore() })
+        this.scene.launch('WinScene', { score: this.cardGame.getScore() })
       })
     }
   }
 
   private rebuildFromEngineState() {
-    // Foundation piles
+    // Foundation piles — preserve existing sprites so cards don't jump position.
+    // Only create a sprite for cards that have no existing sprite (newly added cards).
+    // The newly added card's position is determined by its index in the pile iterator,
+    // which correctly reflects whether it was inserted at the left or right end.
     for (let fi = 0; fi < 4; fi++) {
       const pile = this.cardGame.getFoundationPile(fi)!
       const cards = [...pile]
+
+      // Create sprites for any cards not yet in the map (newly arrived cards)
       for (let ci = 0; ci < cards.length; ci++) {
         const card = cards[ci]
+        if (this.cardSprites.has(card.toString())) {
+          // Sprite already exists — ensure it carries no leftover interactivity
+          const existing = this.cardSprites.get(card.toString())!
+          existing.disableInteractive()
+          existing.removeAllListeners()
+          continue
+        }
         const cx = foundationX(fi) + ci * FOUND_HORIZ_OFFSET
-        const cy = FOUND_Y
-        const sprite = this.makeCardSprite(card, cx, cy, true)
+        const sprite = this.makeCardSprite(card, cx, FOUND_Y, true)
         this.cardSprites.set(card.toString(), sprite)
+      }
+
+      // Reposition every sprite in this pile to its correct index-based X.
+      // This is necessary when cards are inserted on the left side of the pile
+      // (shifting all existing cards right) as well as to enforce correct depth ordering.
+      for (let ci = 0; ci < cards.length; ci++) {
+        const sprite = this.cardSprites.get(cards[ci].toString())
+        if (!sprite) continue
+        sprite.setX(foundationX(fi) + ci * FOUND_HORIZ_OFFSET)
+        sprite.setDepth(DEPTH_CARDS + ci)
       }
     }
 
@@ -975,25 +1139,26 @@ export class GameScene extends Phaser.Scene {
       const tx = tableauX(ti)
       const hiddenCount = pile.hiddenRemaining()
 
-      // Hidden cards — lower depth
+      // Hidden cards — lower depth band: DEPTH_CARDS + ti*20 + hi
       for (let hi = 0; hi < hiddenCount; hi++) {
         const cy = TAB_Y + hi * TAB_HIDDEN_OFFSET
         const sprite = this.add.image(tx, cy, CARD_BACK_KEY)
         sprite.setDisplaySize(CARD_WIDTH, CARD_HEIGHT)
-        sprite.setDepth(DEPTH_CARDS + hi)
+        sprite.setDepth(DEPTH_CARDS + ti * 20 + hi)
         sprite.setData('hidden', true)
         sprite.setData('tableauIndex', ti)
         this.cardSprites.set(`hidden_${ti}_${hi}`, sprite)
       }
 
-      // Active (face-up) cards — higher depth, above hidden
+      // Active (face-up) cards — higher depth band: DEPTH_CARDS + 200 + ti*20 + ci
+      // Starting at +200 guarantees all face-up cards are always above all hidden cards
       const activeCards = [...pile]
       const activeStart = hiddenCount * TAB_HIDDEN_OFFSET
       for (let ci = 0; ci < activeCards.length; ci++) {
         const card = activeCards[ci]
         const cy = TAB_Y + activeStart + ci * TAB_FACE_OFFSET
         const sprite = this.makeCardSprite(card, tx, cy, true)
-        sprite.setDepth(DEPTH_CARDS + hiddenCount + ci)
+        sprite.setDepth(DEPTH_CARDS + 200 + ti * 20 + ci)
         sprite.setData('tableauIndex', ti)
         sprite.setData('activeIndex', ci)
         this.cardSprites.set(card.toString(), sprite)

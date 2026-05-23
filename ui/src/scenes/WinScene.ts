@@ -11,9 +11,10 @@ export class WinScene extends Phaser.Scene {
   create(data: { score: number }) {
     const score = data?.score ?? 0
 
-    // Semi-transparent dark overlay
+    // Semi-transparent dark overlay — also acts as an input blocker so cards beneath can't be dragged
     const overlay = this.add.rectangle(CANVAS_W / 2, CANVAS_H / 2, CANVAS_W, CANVAS_H, 0x000000, 0)
     overlay.setDepth(0)
+    overlay.setInteractive()   // blocks pointer events from passing through to GameScene
     this.tweens.add({
       targets: overlay,
       fillAlpha: 0.72,
@@ -123,7 +124,7 @@ export class WinScene extends Phaser.Scene {
     btn.on('pointerout', () => btn.setFillStyle(0x1a5fa8))
     btn.on('pointerdown', () => {
       this.scene.stop('WinScene')
-      this.scene.start('GameScene')
+      this.scene.get('GameScene').scene.restart()
     })
   }
 }
