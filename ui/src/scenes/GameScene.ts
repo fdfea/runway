@@ -680,7 +680,7 @@ export class GameScene extends Phaser.Scene {
       this.cardGame.makeMove(move)
       // Move succeeded — play sound then animate
       if (drag.sourceType === 'tableau' && drag.cards.length >= 3) {
-        this.sound.play('card-dealing')
+        this.sound.play('cards-playing')
       } else {
         this.sound.play('card-playing')
       }
@@ -1029,7 +1029,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     // Play the pre-baked deal sound once — it covers the full animation duration.
-    this.sound.play('card-dealing-loop')
+    this.sound.play('cards-dealing')
 
     dealCards.forEach((dc) => {
       this.time.delayedCall(dc.delay, () => {

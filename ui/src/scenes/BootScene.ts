@@ -63,8 +63,8 @@ export class BootScene extends Phaser.Scene {
 
     // Load sound effects
     this.load.audio('card-playing', 'assets/sounds/card-playing.wav')
-    this.load.audio('card-dealing', 'assets/sounds/card-dealing.wav')
-    this.load.audio('card-dealing-loop', 'assets/sounds/card-dealing-loop.wav')
+    this.load.audio('cards-playing', 'assets/sounds/cards-playing.wav')
+    this.load.audio('cards-dealing', 'assets/sounds/cards-dealing.mp3')
     this.load.audio('game-finished', 'assets/sounds/game-finished.mp3')
   }
 
