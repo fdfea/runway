@@ -1,5 +1,5 @@
 import Phaser from 'phaser'
-import { Game as CardGame, Moves, Card } from 'engine'
+import { Game as CardGame, Moves, Card } from 'runway-engine'
 import { cardToKey, CARD_BACK_KEY, BACKGROUND_KEY } from '../utils/CardAssetMap'
 import { CARD_WIDTH, CARD_HEIGHT } from './BootScene'
 
@@ -181,11 +181,11 @@ export class GameScene extends Phaser.Scene {
     // Game title
     const dpr = window.devicePixelRatio || 1
     const titleStyle = { fontFamily: 'Inter, Arial', fontSize: '22px', color: '#e8f4fd', fontStyle: 'bold', resolution: dpr }
-    this.add.text(CANVAS_W / 2, BANNER_H / 2, 'CARD GAME', titleStyle).setOrigin(0.5, 0.5).setDepth(DEPTH_UI)
+    this.add.text(CANVAS_W / 2, BANNER_H / 2, 'RUNWAY', titleStyle).setOrigin(0.5, 0.5).setDepth(DEPTH_UI)
 
     // Score label
     const scoreLabelStyle = { fontFamily: 'Inter, Arial', fontSize: '15px', color: '#7ab8d9', resolution: dpr }
-    this.add.text(CANVAS_W - 200, BANNER_H / 2, 'SCORE', scoreLabelStyle).setOrigin(0.5, 0.5).setDepth(DEPTH_UI)
+    this.add.text(CANVAS_W - 200, BANNER_H / 2, 'Score', scoreLabelStyle).setOrigin(0.5, 0.5).setDepth(DEPTH_UI)
 
     const scoreStyle = { fontFamily: 'Inter, Arial', fontSize: '22px', color: '#4fc3f7', fontStyle: 'bold', resolution: dpr }
     this.scoreText = this.add.text(CANVAS_W - 145, BANNER_H / 2, '0', scoreStyle).setOrigin(0, 0.5)

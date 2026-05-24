@@ -1,4 +1,4 @@
-import { Card, Rank, Suit } from 'engine'
+import { Card } from 'runway-engine'
 
 // Maps an engine Card to the public asset path key used by Phaser loader.
 // Asset filenames follow the pattern: {rank_name}_of_{suit_name}.svg

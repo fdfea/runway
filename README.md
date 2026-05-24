@@ -1,4 +1,4 @@
-# Cards
+# Runway
 
 A custom single-player solitaire card game built with TypeScript. The goal is to move all 52 cards onto four Foundation piles (one per suit, Ace through King). A unique scoring system rewards finishing with fewer draws from the score pile.
 
@@ -17,6 +17,8 @@ cards/
 ```
 
 The UI consumes the engine as a local npm package. The engine must be compiled before the UI can build or run.
+
+The code in engine/ was built by hand without the assistance of AI code generation. The code in ui/ was built with the assistance of Claude Sonnet 4.6 and OpenCode. 
 
 ---
 

@@ -1,7 +1,7 @@
 {
-  "name": "engine",
+  "name": "runway-engine",
   "version": "0.1.0",
-  "description": "Backend card library and rules implementation for Game.",
+  "description": "Backend library and rules implementation for Runway card game",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {

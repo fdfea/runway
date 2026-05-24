@@ -1,6 +1,6 @@
-# Game (to be titled)
+# Runway Engine
 
-Backend card library and rules implementation for Game.
+Backend card library and rules implementation for Runway.
 
 # CLI Runner
 

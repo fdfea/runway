@@ -1,7 +1,7 @@
 {
-  "name": "ui",
+  "name": "runway-ui",
   "version": "0.1.0",
-  "description": "Browser-based card game UI using Phaser.js and Vite",
+  "description": "Browser-based UI for Runway card game using Phaser.js and Vite",
   "private": true,
   "scripts": {
     "dev": "vite",
@@ -9,7 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "engine": "file:../engine",
+    "runway-engine": "file:../engine",
     "phaser": "^3.88.2"
   },
   "devDependencies": {
