@@ -107,7 +107,31 @@ export class GameScene extends Phaser.Scene {
     this.drawBanner()
     this.drawPileSlots()
     this.buildAllCardSprites()
-    this.dealAnimation()
+
+    // dealAnimation() sets up all sprites on the stock pile ready to fly, and
+    // returns a startDeal callback that fires the tweens + sound together.
+    const startDeal = this.dealAnimation()
+
+    // On restart the audio context is already unlocked, so deal immediately.
+    // On a fresh page load, browsers block audio until the user interacts with
+    // the page — an invisible overlay over the card area (below the banner)
+    // captures that first click/tap, satisfying the autoplay policy so the
+    // deal sound always plays in sync with the animation. The banner is left
+    // uncovered so Rules and Restart remain clickable at all times.
+    const data = this.scene.settings.data as { fromRestart?: boolean } | undefined
+    if (data?.fromRestart) {
+      startDeal()
+    } else {
+      const overlayH = CANVAS_H - BANNER_H
+      const overlay = this.add.rectangle(CANVAS_W / 2, BANNER_H + overlayH / 2, CANVAS_W, overlayH, 0x000000, 0)
+      overlay.setDepth(DEPTH_DRAGGING + 1)
+      overlay.setInteractive()
+      overlay.once('pointerdown', () => {
+        overlay.destroy()
+        startDeal()
+      })
+    }
+
     this.drawAttribution()
   }
 
@@ -1053,7 +1077,12 @@ export class GameScene extends Phaser.Scene {
 
   // ─── Deal animation ────────────────────────────────────────────────────────
 
-  private dealAnimation() {
+  // Sets up all card sprites on the stock pile ready to deal, then returns a
+  // startDeal callback that — when called — fires the tweens and deal sound
+  // together. Separating setup from start lets the caller gate the animation
+  // behind a user gesture so the browser's autoplay policy is satisfied and
+  // the sound always plays in sync with the first card flying.
+  private dealAnimation(): () => void {
     this.animating = true
 
     // Snapshot the initial game state:
@@ -1107,10 +1136,12 @@ export class GameScene extends Phaser.Scene {
     const total = dealCards.length
 
     if (total === 0) {
-      this.animating = false
-      this.setupInputHandlers()
-      this.setupAllInteractions()
-      return
+      // Nothing to deal — return a no-op that immediately unlocks the game.
+      return () => {
+        this.animating = false
+        this.setupInputHandlers()
+        this.setupAllInteractions()
+      }
     }
 
     // The stock pile currently holds the remaining (undealt) cards.
@@ -1133,63 +1164,67 @@ export class GameScene extends Phaser.Scene {
       dc.sprite.setDepth(DEPTH_CARDS + (total - i))  // card 0 on top, card (total-1) just above stock
     })
 
-    // Play the pre-baked deal sound once — it covers the full animation duration.
-    this.sound.play('cards-dealing')
+    // Return a callback that starts the tweens and sound together.
+    // Called by create() only after the user's first pointer interaction,
+    // which satisfies the browser autoplay policy so the sound always plays.
+    return () => {
+      this.sound.play('cards-dealing')
 
-    dealCards.forEach((dc, i) => {
-      this.time.delayedCall(dc.delay, () => {
-        // The sprite is already visible and positioned at the top of the shrinking pile.
-        // Bring it to the front so it renders above everything while flying.
-        dc.sprite.setDepth(DEPTH_DRAGGING)
-        this.tweens.add({
-          targets: dc.sprite,
-          x: dc.finalX,
-          y: dc.finalY,
-          duration: DEAL_DURATION,
-          ease: 'Cubic.easeOut',
-          onComplete: () => {
-            dc.sprite.setDepth(DEPTH_CARDS)
-            if (dc.isTop && dc.card) {
-              // Flip the top card face-up
-              this.tweens.add({
-                targets: dc.sprite,
-                scaleX: 0,
-                duration: FLIP_DURATION / 2,
-                ease: 'Linear',
-                onComplete: () => {
-                  dc.sprite.setTexture(cardToKey(dc.card))
-                  dc.sprite.setDisplaySize(CARD_WIDTH, CARD_HEIGHT)
-                  // Read the scaleX that setDisplaySize established (texture-dependent)
-                  const targetScaleX = dc.sprite.scaleX
-                  dc.sprite.scaleX = 0
-                  this.tweens.add({
-                    targets: dc.sprite,
-                    scaleX: targetScaleX,
-                    duration: FLIP_DURATION / 2,
-                    ease: 'Linear',
-                    onComplete: () => {
-                      completed++
-                      if (completed === total) {
-                        this.animating = false
-                        this.setupInputHandlers()
-                        this.setupAllInteractions()
-                      }
-                    },
-                  })
-                },
-              })
-            } else {
-              completed++
-              if (completed === total) {
-                this.animating = false
-                this.setupInputHandlers()
-                this.setupAllInteractions()
+      dealCards.forEach((dc) => {
+        this.time.delayedCall(dc.delay, () => {
+          // The sprite is already visible and positioned at the top of the shrinking pile.
+          // Bring it to the front so it renders above everything while flying.
+          dc.sprite.setDepth(DEPTH_DRAGGING)
+          this.tweens.add({
+            targets: dc.sprite,
+            x: dc.finalX,
+            y: dc.finalY,
+            duration: DEAL_DURATION,
+            ease: 'Cubic.easeOut',
+            onComplete: () => {
+              dc.sprite.setDepth(DEPTH_CARDS)
+              if (dc.isTop && dc.card) {
+                // Flip the top card face-up
+                this.tweens.add({
+                  targets: dc.sprite,
+                  scaleX: 0,
+                  duration: FLIP_DURATION / 2,
+                  ease: 'Linear',
+                  onComplete: () => {
+                    dc.sprite.setTexture(cardToKey(dc.card))
+                    dc.sprite.setDisplaySize(CARD_WIDTH, CARD_HEIGHT)
+                    // Read the scaleX that setDisplaySize established (texture-dependent)
+                    const targetScaleX = dc.sprite.scaleX
+                    dc.sprite.scaleX = 0
+                    this.tweens.add({
+                      targets: dc.sprite,
+                      scaleX: targetScaleX,
+                      duration: FLIP_DURATION / 2,
+                      ease: 'Linear',
+                      onComplete: () => {
+                        completed++
+                        if (completed === total) {
+                          this.animating = false
+                          this.setupInputHandlers()
+                          this.setupAllInteractions()
+                        }
+                      },
+                    })
+                  },
+                })
+              } else {
+                completed++
+                if (completed === total) {
+                  this.animating = false
+                  this.setupInputHandlers()
+                  this.setupAllInteractions()
+                }
               }
-            }
-          },
+            },
+          })
         })
       })
-    })
+    }
   }
 
   // ─── Setup all interactions after deal / after redraw ─────────────────────
@@ -1331,7 +1366,9 @@ export class GameScene extends Phaser.Scene {
   // ─── Restart ───────────────────────────────────────────────────────────────
 
   private restartGame() {
-    this.scene.restart()
+    // Signal to create() that audio is already unlocked so it can skip the
+    // tap-to-start overlay and begin dealing immediately.
+    this.scene.restart({ fromRestart: true })
   }
 
   // ─── Attribution ──────────────────────────────────────────────────────────

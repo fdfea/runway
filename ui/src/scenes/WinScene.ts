@@ -98,16 +98,6 @@ export class WinScene extends Phaser.Scene {
       ease: 'Back.easeOut',
     })
 
-    // Lower score = better reminder
-    const hint = this.add.text(panelX, panelY + 95, score === 0 ? 'Perfect score!' : 'Lower is better', {
-      fontFamily: FONT,
-      fontSize: '13px',
-      color: score === 0 ? '#69f0ae' : '#7ab8d9',
-      resolution: DPR,
-    }).setOrigin(0.5, 0.5).setDepth(2).setAlpha(0)
-
-    this.tweens.add({ targets: hint, alpha: 0.8, duration: 300, delay: 900 })
-
     // Play Again button
     const btnW = 180
     const btnH = 44
