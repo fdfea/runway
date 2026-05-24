@@ -371,6 +371,7 @@ export class GameScene extends Phaser.Scene {
 
   private animateReveal(ti: number, card: Card) {
     this.animating = true
+    this.sound.play('card-playing')
     const tx = tableauX(ti)
     const pile = this.cardGame.getTableauPile(ti)!
     const hiddenCount = pile.hiddenRemaining()  // after reveal, this is one less
@@ -535,6 +536,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     // Move succeeded — animate the card flying to its score pile destination
+    this.sound.play('card-playing')
     this.animating = true
     const scoreCards = [...this.cardGame.getScorePile()]
     const newCount = scoreCards.length
@@ -676,7 +678,12 @@ export class GameScene extends Phaser.Scene {
       const move = this.buildMove(drag, target)
       if (!move) throw new Error('No move available')
       this.cardGame.makeMove(move)
-      // Move succeeded — animate then redraw
+      // Move succeeded — play sound then animate
+      if (drag.sourceType === 'tableau' && drag.cards.length >= 3) {
+        this.sound.play('card-dealing')
+      } else {
+        this.sound.play('card-playing')
+      }
       if (target.type === 'foundation') {
         // Foundation merges have their own dedicated animation (staggered, direction-aware)
         this.animateFoundationMerge(drag, target.index, () => {
@@ -1020,6 +1027,9 @@ export class GameScene extends Phaser.Scene {
       this.setupAllInteractions()
       return
     }
+
+    // Play the pre-baked deal sound once — it covers the full animation duration.
+    this.sound.play('card-dealing-loop')
 
     dealCards.forEach((dc) => {
       this.time.delayedCall(dc.delay, () => {

@@ -13,6 +13,8 @@ export class WinScene extends Phaser.Scene {
   create(data: { score: number }) {
     const score = data?.score ?? 0
 
+    this.sound.play('game-finished')
+
     // Semi-transparent dark overlay — also acts as an input blocker so cards beneath can't be dragged
     const overlay = this.add.rectangle(CANVAS_W / 2, CANVAS_H / 2, CANVAS_W, CANVAS_H, 0x000000, 0)
     overlay.setDepth(0)

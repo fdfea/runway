@@ -60,6 +60,12 @@ export class BootScene extends Phaser.Scene {
     for (const entry of ALL_CARD_KEYS) {
       this.load.svg(entry.key, entry.path, { width: CARD_WIDTH * 2, height: CARD_HEIGHT * 2 })
     }
+
+    // Load sound effects
+    this.load.audio('card-playing', 'assets/sounds/card-playing.wav')
+    this.load.audio('card-dealing', 'assets/sounds/card-dealing.wav')
+    this.load.audio('card-dealing-loop', 'assets/sounds/card-dealing-loop.wav')
+    this.load.audio('game-finished', 'assets/sounds/game-finished.mp3')
   }
 
   create() {
