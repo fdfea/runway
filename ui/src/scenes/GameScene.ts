@@ -801,16 +801,24 @@ export class GameScene extends Phaser.Scene {
     const hw = CARD_WIDTH / 2 + 50
     const hh = CARD_HEIGHT / 2 + 50
 
+    // Use the actual top-card position (not the cursor) for vertical hit tests.
+    // When dragging a multi-card run, the cursor may be far below the top card,
+    // so testing topCardY gives accurate placement regardless of run length.
+    const topCardY = py - drag.offsetY[0]
+
     // Check foundation piles — hit zone covers the entire fan plus padding on all sides
     for (let i = 0; i < 4; i++) {
       const fx = foundationX(i)
       const pile = this.cardGame.getFoundationPile(i)!
       const cards = [...pile]
       const lastX = fx + Math.max(0, cards.length - 1) * FOUND_HORIZ_OFFSET
-      // Fan spans from fx (first card) to lastX (last card); add hw padding on each side
+      // Fan spans from fx (first card) to lastX (last card); add padding on each side.
+      // Vertical padding is kept tight (10px) so the zone doesn't bleed into the tableau row.
       const fanLeft = fx - CARD_WIDTH / 2 - 20
-      const fanRight = lastX + CARD_WIDTH / 2 + 20
-      if (px >= fanLeft && px <= fanRight && Math.abs(py - FOUND_Y) <= hh) {
+      const rawFanRight = lastX + CARD_WIDTH / 2 + 20
+      const nextPileLeft = i < 3 ? foundationX(i + 1) - CARD_WIDTH / 2 - 20 : Infinity
+      const fanRight = Math.min(rawFanRight, nextPileLeft - 4)
+      if (px >= fanLeft && px <= fanRight && Math.abs(topCardY - FOUND_Y) <= CARD_HEIGHT / 2 + 10) {
         return { type: 'foundation', index: i, x: lastX, y: FOUND_Y }
       }
     }
@@ -830,13 +838,15 @@ export class GameScene extends Phaser.Scene {
         targetY = TAB_Y + (hiddenCount > 0 ? (hiddenCount - 1) * TAB_HIDDEN_OFFSET : 0)
       }
 
-      // Tall hit zone covering the whole pile column with generous padding
+      // Tall hit zone covering the whole pile column with generous padding.
+      // topCardY is used for the vertical check so that dropping a large run works
+      // correctly even when the cursor is far below the top card of the dragged run.
       const totalCardsH = activeStart + Math.max(0, activeCards.length - 1) * TAB_FACE_OFFSET
-      const pileH = Math.max(CARD_HEIGHT, totalCardsH + CARD_HEIGHT) + 30
+      const pileH = Math.max(CARD_HEIGHT, totalCardsH + CARD_HEIGHT) + 40
       const pileTop = TAB_Y - CARD_HEIGHT / 2 - 20
       const pileBottom = pileTop + pileH
 
-      if (Math.abs(px - tx) <= hw && py >= pileTop && py <= pileBottom) {
+      if (Math.abs(px - tx) <= hw && topCardY >= pileTop && topCardY <= pileBottom) {
         return { type: 'tableau', index: i, x: tx, y: targetY }
       }
     }
