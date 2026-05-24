@@ -1,8 +1,10 @@
 # Runway
 
-A custom single-player solitaire card game built with TypeScript. The goal is to move all 52 cards onto four Foundation piles (one per suit, Ace through King). A unique scoring system rewards finishing with fewer draws from the score pile.
+A custom single-player solitaire card game built with TypeScript and Phaser. The goal is to move all cards onto the four Foundation piles with the lowest score possible. Playable in a browser or terminal. 
 
-Playable in the browser via a Phaser 3 UI, or directly in the terminal via a CLI runner.
+---
+
+<img width="1566" height="879" alt="runway-screenshot" src="https://github.com/user-attachments/assets/c82f7233-ab6f-4cbb-9701-fd2bb0a3c7eb" />
 
 ---
 
