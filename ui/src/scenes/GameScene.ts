@@ -56,6 +56,7 @@ const FLIP_DURATION = 180
 const RETURN_DURATION = 280
 const SNAP_DURATION = 240
 const FOUND_STAGGER = 80   // ms between successive cards in a foundation merge
+const TAB_STAGGER = 60     // ms between successive cards in a tableau merge
 
 type PileType = 'foundation' | 'tableau' | 'stock' | 'score'
 
@@ -689,6 +690,18 @@ export class GameScene extends Phaser.Scene {
         this.animateFoundationMerge(drag, target.index, () => {
           this.fullRedraw()
         })
+      } else if (
+        target.type === 'tableau' &&
+        (drag.sourceType === 'stock' || drag.sourceType === 'score') &&
+        [...this.cardGame.getTableauPile(target.index)!].length === drag.cards.length
+      ) {
+        // Stock or score card dropped onto a previously empty tableau pile.
+        // Snap to the final position then flip face-up in-place, so the card
+        // lands at exactly the position fullRedraw() will use — no visible jump.
+        const actualTarget = this.computeActualTarget(drag, target)
+        this.animateSnapThenFlip(drag, actualTarget, () => {
+          this.fullRedraw()
+        })
       } else {
         // For all other targets, snap the dragged sprites to their final positions
         const actualTarget = this.computeActualTarget(drag, target)
@@ -930,35 +943,111 @@ export class GameScene extends Phaser.Scene {
 
   private animateSnap(drag: DragState, target: PileTarget, onDone: () => void) {
     this.animating = true
+    const N = drag.cards.length
     let completed = 0
-    drag.cards.forEach((sprite, i) => {
-      // Foundation piles fan horizontally; tableau piles fan vertically.
-      let destX: number
-      let destY: number
-      if (target.type === 'foundation') {
-        destX = target.x + i * FOUND_HORIZ_OFFSET
-        destY = target.y
-      } else if (target.type === 'tableau') {
-        destX = target.x
-        destY = target.y + i * TAB_FACE_OFFSET
-      } else {
-        destX = target.x
-        destY = target.y
+    const done = () => {
+      completed++
+      if (completed === N) {
+        this.animating = false
+        onDone()
       }
+    }
+
+    if (target.type === 'tableau') {
+      // Look up each dropped card's final position in the post-merge pile so we can
+      // animate in the correct order — deepest card first — regardless of whether the
+      // engine reversed the merge direction (e.g. [7c,8c] onto [10c,9c]).
+      const pile = this.cardGame.getTableauPile(target.index)!
+      const activeCards = [...pile]
+      const hiddenCount = pile.hiddenRemaining()
+      const baseY = TAB_Y + hiddenCount * TAB_HIDDEN_OFFSET
+
+      const order = drag.cards
+        .map((sprite, i) => {
+          const ec = drag.engineCards[i]
+          const finalIndex = activeCards.findIndex(c => c.toString() === ec.toString())
+          return { sprite, finalIndex }
+        })
+        // Deepest card (highest finalIndex) animates first so each card lands on top
+        // of the one that is already settled — mirrors animateFoundationMerge logic.
+        .sort((a, b) => b.finalIndex - a.finalIndex)
+
+      order.forEach(({ sprite, finalIndex }, staggerStep) => {
+        sprite.setDepth(DEPTH_CARDS + 200 + target.index * 20 + finalIndex)
+        this.tweens.add({
+          targets: sprite,
+          x: tableauX(target.index),
+          y: baseY + finalIndex * TAB_FACE_OFFSET,
+          duration: SNAP_DURATION,
+          delay: staggerStep * TAB_STAGGER,
+          ease: 'Sine.easeOut',
+          onComplete: done,
+        })
+      })
+      return
+    }
+
+    // Non-tableau targets (score, etc.) — single card, no stagger needed.
+    drag.cards.forEach((sprite) => {
       this.tweens.add({
         targets: sprite,
-        x: destX,
-        y: destY,
+        x: target.x,
+        y: target.y,
         duration: SNAP_DURATION,
         ease: 'Sine.easeOut',
-        onComplete: () => {
-          completed++
-          if (completed === drag.cards.length) {
-            this.animating = false
-            onDone()
-          }
-        },
+        onComplete: done,
       })
+    })
+  }
+
+  // ─── Snap + flip animation (stock/score → empty tableau) ──────────────────
+  //
+  // Snaps the face-down card to its final position, then flips it face-up
+  // in-place. This ensures the card lands at exactly the coordinate that
+  // fullRedraw() will use, eliminating any visible jump on texture swap.
+
+  private animateSnapThenFlip(drag: DragState, target: PileTarget, onDone: () => void) {
+    this.animating = true
+    const sprite = drag.cards[0]
+    const card = drag.engineCards[0]
+
+    this.tweens.add({
+      targets: sprite,
+      x: target.x,
+      y: target.y,
+      duration: SNAP_DURATION,
+      ease: 'Sine.easeOut',
+      onComplete: () => {
+        if (drag.sourceType === 'score') {
+          // Already face-up — no flip needed
+          this.animating = false
+          onDone()
+        } else {
+          // Flip in-place: collapse → swap texture → expand (mirrors deal + reveal animations)
+          this.tweens.add({
+            targets: sprite,
+            scaleX: 0,
+            duration: FLIP_DURATION / 2,
+            ease: 'Linear',
+            onComplete: () => {
+              sprite.setTexture(cardToKey(card))
+              sprite.setDisplaySize(CARD_WIDTH, CARD_HEIGHT)
+              const targetScaleX = sprite.scaleX
+              sprite.scaleX = 0
+              this.tweens.add({
+                targets: sprite,
+                scaleX: targetScaleX,
+                duration: FLIP_DURATION / 2,
+                ease: 'Linear',
+                onComplete: () => {
+                  this.animating = false
+                  onDone()
+                },
+              })
+            },
+          })
+        }
+      },
     })
   }
 
@@ -992,8 +1081,6 @@ export class GameScene extends Phaser.Scene {
         if (!sprite) continue
         const finalX = sprite.x
         const finalY = sprite.y
-        sprite.x = STOCK_X
-        sprite.y = STOCK_Y
         sprite.setAlpha(0)
         dealCards.push({ sprite, finalX, finalY, delay, isTop: false, card: null as unknown as Card, tableauIndex: ti })
         delay += DEAL_STAGGER
@@ -1006,8 +1093,6 @@ export class GameScene extends Phaser.Scene {
         if (!sprite) continue
         const finalX = sprite.x
         const finalY = sprite.y
-        sprite.x = STOCK_X
-        sprite.y = STOCK_Y
         sprite.setAlpha(0)
         // The face-up card will animate in face-down then flip
         sprite.setTexture(CARD_BACK_KEY)
@@ -1028,12 +1113,34 @@ export class GameScene extends Phaser.Scene {
       return
     }
 
+    // The stock pile currently holds the remaining (undealt) cards.
+    // We want to visually start with all cards stacked — the undealt stock cards
+    // at the bottom, and the 'total' dealt cards stacked on top of them.
+    // Card i in dealCards sits at position (stockSize + total - 1 - i) from the bottom.
+    const stockSize = [...this.cardGame.getStockPile()].length
+    const fullPileSize = stockSize + total
+
+    // Position each dealt card at its correct height in the initial full pile,
+    // then make it visible so it appears as part of the stack.
+    // Card i=0 is dealt first and sits at the top, so it gets the highest depth.
+    dealCards.forEach((dc, i) => {
+      const stackIndex = fullPileSize - 1 - i   // 0 = bottom of pile, higher = closer to top
+      dc.sprite.x = STOCK_X
+      dc.sprite.y = STOCK_Y - stackIndex * STOCK_OFFSET
+      dc.sprite.setAlpha(1)
+      dc.sprite.setTexture(CARD_BACK_KEY)
+      dc.sprite.setDisplaySize(CARD_WIDTH, CARD_HEIGHT)
+      dc.sprite.setDepth(DEPTH_CARDS + (total - i))  // card 0 on top, card (total-1) just above stock
+    })
+
     // Play the pre-baked deal sound once — it covers the full animation duration.
     this.sound.play('cards-dealing')
 
-    dealCards.forEach((dc) => {
+    dealCards.forEach((dc, i) => {
       this.time.delayedCall(dc.delay, () => {
-        dc.sprite.setAlpha(1)
+        // The sprite is already visible and positioned at the top of the shrinking pile.
+        // Bring it to the front so it renders above everything while flying.
+        dc.sprite.setDepth(DEPTH_DRAGGING)
         this.tweens.add({
           targets: dc.sprite,
           x: dc.finalX,
@@ -1041,6 +1148,7 @@ export class GameScene extends Phaser.Scene {
           duration: DEAL_DURATION,
           ease: 'Cubic.easeOut',
           onComplete: () => {
+            dc.sprite.setDepth(DEPTH_CARDS)
             if (dc.isTop && dc.card) {
               // Flip the top card face-up
               this.tweens.add({
