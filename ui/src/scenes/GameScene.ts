@@ -89,6 +89,9 @@ export class GameScene extends Phaser.Scene {
   private pileSlots: Phaser.GameObjects.Rectangle[] = []
 
   private scoreText!: Phaser.GameObjects.Text
+  private timerText!: Phaser.GameObjects.Text
+  private timerEvent: Phaser.Time.TimerEvent | null = null
+  private elapsedSeconds = 0
   private drag: DragState | null = null
   private animating = false
   private pointerDownPos: { x: number; y: number } | null = null
@@ -146,6 +149,8 @@ export class GameScene extends Phaser.Scene {
   // ─── Banner ────────────────────────────────────────────────────────────────
 
   private drawBanner() {
+    const dpr = window.devicePixelRatio || 1
+
     // Dark blue banner bar
     const banner = this.add.rectangle(CANVAS_W / 2, BANNER_H / 2, CANVAS_W, BANNER_H, 0x0a1628)
     banner.setDepth(DEPTH_BANNER)
@@ -178,8 +183,14 @@ export class GameScene extends Phaser.Scene {
     // Keep rulesText reference alive (avoids unused-variable lint warning)
     void rulesText
 
+    // Timer display (to the right of the Rules button)
+    const timerLabelStyle = { fontFamily: 'Inter, Arial', fontSize: '12px', color: '#7ab8d9', resolution: dpr }
+    this.add.text(152, BANNER_H / 2 - 9, 'TIME', timerLabelStyle).setOrigin(0.5, 0.5).setDepth(DEPTH_UI)
+
+    const timerStyle = { fontFamily: 'Inter, Arial', fontSize: '18px', color: '#4fc3f7', fontStyle: 'bold', resolution: dpr }
+    this.timerText = this.add.text(152, BANNER_H / 2 + 9, '00:00', timerStyle).setOrigin(0.5, 0.5).setDepth(DEPTH_UI)
+
     // Game title
-    const dpr = window.devicePixelRatio || 1
     const titleStyle = { fontFamily: 'Inter, Arial', fontSize: '22px', color: '#e8f4fd', fontStyle: 'bold', resolution: dpr }
     this.add.text(CANVAS_W / 2, BANNER_H / 2, 'RUNWAY', titleStyle).setOrigin(0.5, 0.5).setDepth(DEPTH_UI)
 
@@ -1217,6 +1228,7 @@ export class GameScene extends Phaser.Scene {
                           this.animating = false
                           this.setupInputHandlers()
                           this.setupAllInteractions()
+                          this.startTimer()
                         }
                       },
                     })
@@ -1228,6 +1240,7 @@ export class GameScene extends Phaser.Scene {
                   this.animating = false
                   this.setupInputHandlers()
                   this.setupAllInteractions()
+                  this.startTimer()
                 }
               }
             },
@@ -1246,6 +1259,27 @@ export class GameScene extends Phaser.Scene {
     }
     this.setupStockInteraction()
     this.setupScoreInteraction()
+  }
+
+  // ─── Game timer ───────────────────────────────────────────────────────────
+
+  private startTimer() {
+    this.elapsedSeconds = 0
+    this.updateTimerDisplay()
+    this.timerEvent = this.time.addEvent({
+      delay: 1000,
+      loop: true,
+      callback: () => {
+        this.elapsedSeconds++
+        this.updateTimerDisplay()
+      },
+    })
+  }
+
+  private updateTimerDisplay() {
+    const m = Math.floor(this.elapsedSeconds / 60)
+    const s = this.elapsedSeconds % 60
+    this.timerText.setText(`${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`)
   }
 
   // ─── Full redraw after a move ──────────────────────────────────────────────
@@ -1283,8 +1317,11 @@ export class GameScene extends Phaser.Scene {
 
     // Check for win — launch WinScene as an overlay on top of GameScene
     if (this.cardGame.finished()) {
+      this.timerEvent?.remove()
+      this.timerEvent = null
+      const elapsed = this.elapsedSeconds
       this.time.delayedCall(400, () => {
-        this.scene.launch('WinScene', { score: this.cardGame.getScore() })
+        this.scene.launch('WinScene', { score: this.cardGame.getScore(), elapsed })
       })
     }
   }
