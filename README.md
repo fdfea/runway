@@ -4,7 +4,7 @@ A custom single-player solitaire card game built with TypeScript and Phaser. The
 
 ---
 
-<img width="1566" height="879" alt="runway-screenshot" src="https://github.com/user-attachments/assets/c82f7233-ab6f-4cbb-9701-fd2bb0a3c7eb" />
+<img width="1566" height="879" alt="runway-screenshot-1" src="https://github.com/user-attachments/assets/66bcf6f1-ddbf-42fa-9f9a-01ce3860f6af" />
 
 ---
 
