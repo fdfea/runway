@@ -57,6 +57,7 @@ const RETURN_DURATION = 280
 const SNAP_DURATION = 240
 const FOUND_STAGGER = 80   // ms between successive cards in a foundation merge
 const TAB_STAGGER = 60     // ms between successive cards in a tableau merge
+const SCORE_STAGGER = 80   // ms between successive cards in a score pile merge
 
 type PileType = 'foundation' | 'tableau' | 'stock' | 'score'
 
@@ -732,6 +733,12 @@ export class GameScene extends Phaser.Scene {
         this.animateFoundationMerge(drag, target.index, () => {
           this.fullRedraw()
         })
+      } else if (target.type === 'score' && drag.cards.length > 1) {
+        // Multi-card drops onto the score pile get a staggered animation where each
+        // card flies to its individual slot as the existing pile compresses.
+        this.animateScoreMerge(drag, () => {
+          this.fullRedraw()
+        })
       } else if (
         target.type === 'tableau' &&
         (drag.sourceType === 'stock' || drag.sourceType === 'score') &&
@@ -987,6 +994,90 @@ export class GameScene extends Phaser.Scene {
         y: FOUND_Y,
         duration: SNAP_DURATION,
         delay: staggerStep * FOUND_STAGGER,
+        ease: 'Sine.easeOut',
+        onComplete: done,
+      })
+    })
+  }
+
+  // ─── Score pile merge animation (multi-card drop) ─────────────────────────
+  //
+  // Mirrors animateFoundationMerge: each incoming card flies to its individual
+  // final slot in the score pile with a staggered delay, while existing score
+  // sprites slide to their newly-compressed positions simultaneously.
+
+  private animateScoreMerge(drag: DragState, onDone: () => void) {
+    this.animating = true
+
+    const scoreCards = [...this.cardGame.getScorePile()]
+    const newCount = scoreCards.length           // total after move
+    const N = drag.cards.length                  // number of incoming cards
+
+    // Determine which cards in the post-move pile are the incoming ones and which
+    // were already there.  The engine appends to the score pile in drag order
+    // (score pile is unordered; UI renders in insertion order), so the N newest
+    // cards are the ones just dropped.  We find each incoming card's final index
+    // by searching the post-move scoreCards array.
+    const finalIndices = drag.engineCards.map(ec =>
+      scoreCards.findIndex(c => c.toString() === ec.toString())
+    )
+
+    // Collect existing score sprites (cards that were in the pile before the drop).
+    // They may need to slide left to new compressed positions.
+    const existingSprites: { sprite: Phaser.GameObjects.Image; finalIndex: number }[] = []
+    for (let ci = 0; ci < newCount; ci++) {
+      // Skip cards that are incoming (they are the dragged sprites)
+      if (finalIndices.includes(ci)) continue
+      const card = scoreCards[ci]
+      // Try both old key format (before fullRedraw) and current key
+      const key = `score_${ci}_${card.toString()}`
+      const sprite = this.cardSprites.get(key)
+      if (sprite) existingSprites.push({ sprite, finalIndex: ci })
+    }
+
+    // Total animation window = stagger delay for all incoming cards + one snap duration
+    const totalDuration = (N - 1) * SCORE_STAGGER + SNAP_DURATION
+
+    const totalTweens = N + existingSprites.length
+    let completed = 0
+    const done = () => {
+      completed++
+      if (completed === totalTweens) {
+        this.animating = false
+        onDone()
+      }
+    }
+
+    // Slide existing sprites to their (possibly compressed) new positions.
+    // Their final index in the pile hasn't changed — only the spacing formula
+    // changes because newCount is now larger, so scoreCardX() returns a smaller offset.
+    existingSprites.forEach(({ sprite, finalIndex }) => {
+      sprite.setDepth(DEPTH_CARDS + finalIndex)
+      this.tweens.add({
+        targets: sprite,
+        x: this.scoreCardX(finalIndex, newCount),
+        y: SCORE_Y,
+        duration: totalDuration,
+        ease: 'Sine.easeOut',
+        onComplete: done,
+      })
+    })
+
+    // Sort incoming cards so the one landing at the rightmost (highest) index
+    // goes first — each subsequent card slots in to its left, visibly separating
+    // from the run as they fan out across the pile.
+    const order = drag.cards
+      .map((sprite, i) => ({ sprite, finalIndex: finalIndices[i] }))
+      .sort((a, b) => b.finalIndex - a.finalIndex)
+
+    order.forEach(({ sprite, finalIndex }, staggerStep) => {
+      sprite.setDepth(DEPTH_CARDS + finalIndex)
+      this.tweens.add({
+        targets: sprite,
+        x: this.scoreCardX(finalIndex, newCount),
+        y: SCORE_Y,
+        duration: SNAP_DURATION,
+        delay: staggerStep * SCORE_STAGGER,
         ease: 'Sine.easeOut',
         onComplete: done,
       })
