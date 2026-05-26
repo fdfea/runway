@@ -132,7 +132,8 @@ export class GameScene extends Phaser.Scene {
       overlay.setInteractive()
       overlay.once('pointerdown', () => {
         overlay.destroy()
-        startDeal()
+        const ctx = this.sound.context as AudioContext
+        ctx.resume().then(() => startDeal())
       })
     }
 
