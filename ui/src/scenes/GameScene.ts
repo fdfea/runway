@@ -204,7 +204,7 @@ export class GameScene extends Phaser.Scene {
     this.add.text(CANVAS_W - 200, BANNER_H / 2, 'Score', scoreLabelStyle).setOrigin(0.5, 0.5).setDepth(DEPTH_UI)
 
     const scoreStyle = { fontFamily: 'Inter, Arial', fontSize: '22px', color: '#4fc3f7', fontStyle: 'bold', resolution: dpr }
-    this.scoreText = this.add.text(CANVAS_W - 145, BANNER_H / 2, '0', scoreStyle).setOrigin(0, 0.5)
+    this.scoreText = this.add.text(CANVAS_W - 160, BANNER_H / 2, '0', scoreStyle).setOrigin(0, 0.5)
     this.scoreText.setDepth(DEPTH_UI)
 
     // Restart button
