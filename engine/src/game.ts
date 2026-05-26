@@ -56,6 +56,7 @@ export class Game {
     private readonly stockPile: Deck
 
     private score: number = 0
+    private moveCount: number = 0
 
     constructor() {
         const deck = Decks.noAces()
@@ -76,7 +77,8 @@ export class Game {
     }
 
     makeMove(move: Move): void {
-        return move.apply(this)
+        move.apply(this)
+        this.moveCount++
     }
 
     finished(): boolean {
@@ -89,6 +91,10 @@ export class Game {
 
     getScore(): number {
         return this.score
+    }
+
+    getMoveCount(): number {
+        return this.moveCount
     }
 
     getFoundationPile(position: number): FoundationPile | undefined {
