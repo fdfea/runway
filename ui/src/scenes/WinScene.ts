@@ -10,9 +10,10 @@ export class WinScene extends Phaser.Scene {
     super({ key: 'WinScene' })
   }
 
-  create(data: { score: number; elapsed?: number }) {
+  create(data: { score: number; elapsed?: number; moveCount?: number }) {
     const score = data?.score ?? 0
     const elapsed = data?.elapsed ?? 0
+    const moveCount = data?.moveCount ?? 0
     const elapsedMin = Math.floor(elapsed / 60)
     const elapsedSec = elapsed % 60
     const elapsedStr = `${String(elapsedMin).padStart(2, '0')}:${String(elapsedSec).padStart(2, '0')}`
@@ -102,25 +103,25 @@ export class WinScene extends Phaser.Scene {
       ease: 'Back.easeOut',
     })
 
-    // Time label and value — less prominent than the score
-    const timeLbl = this.add.text(panelX, panelY + 92, 'TIME', {
-      fontFamily: FONT,
-      fontSize: '12px',
-      color: '#7ab8d9',
-      letterSpacing: 2,
-      resolution: DPR,
-    }).setOrigin(0.5, 0.5).setDepth(2).setAlpha(0)
+    // Time and move count — less prominent than the score, displayed side-by-side
+    const statLabelStyle = { fontFamily: FONT, fontSize: '12px', color: '#7ab8d9', letterSpacing: 2, resolution: DPR }
+    const statValueStyle = { fontFamily: FONT, fontSize: '22px', color: '#a0c8e8', resolution: DPR }
 
+    const timeLbl = this.add.text(panelX - 75, panelY + 92, 'TIME', statLabelStyle)
+      .setOrigin(0.5, 0.5).setDepth(2).setAlpha(0)
     this.tweens.add({ targets: timeLbl, alpha: 1, duration: 300, delay: 850 })
 
-    const timeVal = this.add.text(panelX, panelY + 112, elapsedStr, {
-      fontFamily: FONT,
-      fontSize: '22px',
-      color: '#a0c8e8',
-      resolution: DPR,
-    }).setOrigin(0.5, 0.5).setDepth(2).setAlpha(0)
-
+    const timeVal = this.add.text(panelX - 75, panelY + 112, elapsedStr, statValueStyle)
+      .setOrigin(0.5, 0.5).setDepth(2).setAlpha(0)
     this.tweens.add({ targets: timeVal, alpha: 1, duration: 300, delay: 900 })
+
+    const movesLbl = this.add.text(panelX + 75, panelY + 92, 'MOVES', statLabelStyle)
+      .setOrigin(0.5, 0.5).setDepth(2).setAlpha(0)
+    this.tweens.add({ targets: movesLbl, alpha: 1, duration: 300, delay: 850 })
+
+    const movesVal = this.add.text(panelX + 75, panelY + 112, moveCount.toString(), statValueStyle)
+      .setOrigin(0.5, 0.5).setDepth(2).setAlpha(0)
+    this.tweens.add({ targets: movesVal, alpha: 1, duration: 300, delay: 900 })
 
     // Play Again button
     const btnW = 180

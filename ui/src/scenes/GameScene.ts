@@ -90,6 +90,7 @@ export class GameScene extends Phaser.Scene {
 
   private scoreText!: Phaser.GameObjects.Text
   private timerText!: Phaser.GameObjects.Text
+  private moveCountText!: Phaser.GameObjects.Text
   private timerEvent: Phaser.Time.TimerEvent | null = null
   private elapsedSeconds = 0
   private drag: DragState | null = null
@@ -189,6 +190,10 @@ export class GameScene extends Phaser.Scene {
 
     const timerStyle = { fontFamily: 'Inter, Arial', fontSize: '18px', color: '#4fc3f7', fontStyle: 'bold', resolution: dpr }
     this.timerText = this.add.text(152, BANNER_H / 2 + 9, '00:00', timerStyle).setOrigin(0.5, 0.5).setDepth(DEPTH_UI)
+
+    // Move count display (to the right of the timer)
+    this.add.text(240, BANNER_H / 2 - 9, 'MOVE', timerLabelStyle).setOrigin(0.5, 0.5).setDepth(DEPTH_UI)
+    this.moveCountText = this.add.text(240, BANNER_H / 2 + 9, '0', timerStyle).setOrigin(0.5, 0.5).setDepth(DEPTH_UI)
 
     // Game title
     const titleStyle = { fontFamily: 'Inter, Arial', fontSize: '22px', color: '#e8f4fd', fontStyle: 'bold', resolution: dpr }
@@ -455,6 +460,7 @@ export class GameScene extends Phaser.Scene {
             this.cardSprites.set(card.toString(), sprite)
             this.setupTableauDrag(ti)
             this.setupTableauReveal(ti)
+            this.updateMoveCountDisplay()
             this.animating = false
           },
         })
@@ -1276,6 +1282,10 @@ export class GameScene extends Phaser.Scene {
     })
   }
 
+  private updateMoveCountDisplay() {
+    this.moveCountText.setText(String(this.cardGame.getMoveCount()))
+  }
+
   private updateTimerDisplay() {
     const m = Math.floor(this.elapsedSeconds / 60)
     const s = this.elapsedSeconds % 60
@@ -1314,6 +1324,7 @@ export class GameScene extends Phaser.Scene {
     this.rebuildFromEngineState()
     this.setupAllInteractions()
     this.updateScoreDisplay()
+    this.updateMoveCountDisplay()
 
     // Check for win — launch WinScene as an overlay on top of GameScene
     if (this.cardGame.finished()) {
@@ -1321,7 +1332,7 @@ export class GameScene extends Phaser.Scene {
       this.timerEvent = null
       const elapsed = this.elapsedSeconds
       this.time.delayedCall(400, () => {
-        this.scene.launch('WinScene', { score: this.cardGame.getScore(), elapsed })
+        this.scene.launch('WinScene', { score: this.cardGame.getScore(), elapsed, moveCount: this.cardGame.getMoveCount() })
       })
     }
   }
